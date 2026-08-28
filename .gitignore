@@ -1,0 +1,13 @@
+# Local reference material — not redistributable, do not push
+/references/
+/research/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Build output
+*.zip
+
+# local leak-check denylist (personal identifiers)
+.leak-denylist
