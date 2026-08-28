@@ -19,7 +19,7 @@ White balance, vibrance/saturation, Color Mix (HSL), Color Grading, and profiles
 
 ## Profile
 
-**Adobe Color is the default and the right starting point.** It is Adobe's modern general-purpose rendering — pleasing contrast, believable skin, no strong opinion. Every recipe in this skill assumes it unless stated.
+**Adobe Color is Adobe's default profile for RAW and the right starting point.** It is their modern general-purpose rendering, and every recipe in this skill assumes it unless stated otherwise.
 
 Available for RAW: Adobe Color, Adobe Standard, Adobe Landscape, Adobe Portrait, Adobe Vivid, Adobe Neutral, Adobe Monochrome, plus **Camera Matching** profiles that emulate the manufacturer's own JPEG rendering (Camera Standard, Camera Neutral, Camera Portrait, and so on — availability varies by body). Newer versions add the **Adaptive** group — **Adaptive Color** and **Adaptive B&W** — AI per-image profiles that require RAW or DNG.
 
@@ -99,7 +99,7 @@ Eight bands: **Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta.** Each h
 
 **Foliage:** `Green Hue +10 to +20` moves grass away from the yellow-green digital cameras produce, toward a believable green. `Yellow Hue +8` does the same for sunlit leaves.
 
-**Muted look:** pull Sat down 10–20 on every band *except* Orange. Keeping skin while draining the surroundings is the whole trick.
+**Muted look:** pull Sat down 10–20 on every band *except* Orange — skin keeps its colour while the surroundings drain.
 
 ### Color Mix is not a cast fixer
 

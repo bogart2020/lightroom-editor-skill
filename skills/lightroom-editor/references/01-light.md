@@ -79,7 +79,7 @@ The most powerful and most underused control in Lightroom. Each channel pushes t
 | Green | green | magenta |
 | Blue | blue | yellow |
 
-**Faded film shadows** — lift the bottom-left point of the **Blue** curve from `0,0` to `0,12`. Shadows go cool, blacks lift, the image reads as film. The highest-value channel-curve move there is.
+**Faded film shadows** — lift the bottom-left point of the **Blue** curve from `0,0` to `0,12`. Shadows go cool, blacks lift, the image reads as film. One move, and it does more than any other single channel-curve edit.
 
 **Warm highlights, cool shadows** — the standard cinematic split:
 - Blue: `0,10` and `255,245` — blue into shadows, yellow into highlights

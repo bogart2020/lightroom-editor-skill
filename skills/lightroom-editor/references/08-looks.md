@@ -96,6 +96,27 @@ Color Grading: Highlights Hue 50 Sat 14, Shadows Hue 40 Sat 6
 Grain: Amount 18  Size 26  Roughness 55
 ```
 
+**Tungsten cinema look — 3200K-balanced, cool shadows:**
+```
+Temp −400K from neutral   Tint +4
+Contrast +8   Blacks +14
+Blue curve: 0,18  255,250
+Color Grading: Shadows Hue 195 Sat 18, Highlights Hue 20 Sat 10
+Aqua Sat +12   Orange Sat −8
+Grain: Amount 22  Size 30  Roughness 60
+```
+
+The red halation around point lights is the signature of this stock and **cannot be produced with global sliders** — it is a localized bloom around highlights, not a highlight tint. Say so rather than pushing Color Grading Highlights further.
+
+**Ilford HP5 — black and white, classic:**
+```
+Profile: Adobe Monochrome
+Contrast +18   Whites +20   Blacks −12
+Curve: 0,4  64,54  128,128  192,202  255,252
+B&W Mix: Red +20  Orange +25  Yellow +15  Blue −25  Aqua −15
+Grain: Amount 28  Size 34  Roughness 60
+```
+
 ### Fujifilm digital simulation modes
 
 These four are **Fujifilm's own in-camera simulations, not film stocks** — Classic Chrome is not based on any film at all. If the user shoots Fujifilm, `07-sources.md` applies: Adobe ships matched camera profiles that reach these looks far more accurately than sliders can.
@@ -125,27 +146,6 @@ Contrast −30   Highlights −30   Shadows +30   Whites −10   Blacks +20
 Curve: 0,18  128,128  255,238
 Saturation −18   Vibrance +8
 Color Grading: Shadows Hue 210 Sat 12, Highlights Hue 45 Sat 8, Blending 60
-```
-
-**Tungsten cinema look — 3200K-balanced, cool shadows:**
-```
-Temp −400K from neutral   Tint +4
-Contrast +8   Blacks +14
-Blue curve: 0,18  255,250
-Color Grading: Shadows Hue 195 Sat 18, Highlights Hue 20 Sat 10
-Aqua Sat +12   Orange Sat −8
-Grain: Amount 22  Size 30  Roughness 60
-```
-
-The red halation around point lights is the signature of this stock and **cannot be produced with global sliders** — it is a localized bloom around highlights, not a highlight tint. Say so rather than pushing Color Grading Highlights further.
-
-**Ilford HP5 — black and white, classic:**
-```
-Profile: Adobe Monochrome
-Contrast +18   Whites +20   Blacks −12
-Curve: 0,4  64,54  128,128  192,202  255,252
-B&W Mix: Red +20  Orange +25  Yellow +15  Blue −25  Aqua −15
-Grain: Amount 28  Size 34  Roughness 60
 ```
 
 **Acros — black and white, smooth, fine grain:**
