@@ -1,0 +1,39 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # --pre-fix resolves a merge-base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: pip install -r tests/requirements.txt
+
+      - name: Skill regression suite
+        run: python tests/test_skill.py
+
+      - name: Leak check
+        run: ./scripts/leak-check.sh
+
+      - name: Validate every XMP in the repo
+        run: |
+          shopt -s nullglob globstar
+          files=(**/*.xmp)
+          if [ ${#files[@]} -gt 0 ]; then
+            python scripts/preset-check.py "${files[@]}"
+          else
+            echo "no .xmp files tracked in the repo — nothing to validate"
+          fi
+        shell: bash
