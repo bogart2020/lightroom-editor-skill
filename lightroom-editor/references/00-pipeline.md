@@ -1,12 +1,10 @@
 # Pipeline and order
 
-## Lightroom applies edits in a fixed internal order
+## Why order matters
 
-The order the user drags sliders is irrelevant. Lightroom always processes in the same sequence:
+Lightroom is non-destructive and the order you drag sliders in does not change the final result. Adobe does not publish the internal processing order, and you do not need it.
 
-`Demosaic → Profile → White balance → Exposure & tone → Texture/Clarity/Dehaze → Vibrance/Saturation → Color Mix → Color Grading → Tone curve → Detail → Grain → Optics → Geometry → Masks`
-
-The order matters for a different reason: **each stage changes what you are looking at when you judge the next one.** Set contrast before white balance and you are judging contrast through a color cast. Sharpen before noise reduction and you sharpen the noise.
+What matters is that **each stage changes what you are looking at when you judge the next one.** Set contrast before white balance and you are judging contrast through a color cast. Judge sharpening before noise reduction and you are judging the wrong image. The working order below is about making every judgement against a correct picture — it is workflow, not a claim about Adobe's code path.
 
 ## The working order
 
@@ -32,10 +30,12 @@ Work in the order below. It is chosen so every judgement is made against a corre
 
 ## Reading the histogram on mobile
 
-Two-finger tap on the image toggles the histogram. Tap the histogram itself to cycle its display.
+Two-finger tap on the image **cycles** the overlay: info → histogram → off. It may take more than one tap to reach the histogram. Recent versions also expose it as a persistent setting under **⋯ → View Options**.
 
-- **Blue overlay** on the image = shadow clipping (pure black, no detail).
-- **Red overlay** = highlight clipping (pure white, no detail).
+On mobile, clipping is a **held preview, not a latched overlay**: open a tone slider (Exposure, Highlights, Whites, Blacks) and two-finger tap-and-hold on it. The overlay appears only while held.
+
+- **Blue** = shadow clipping. **Red** = highlight clipping.
+- **Yellow, cyan, magenta** mean only some channels are clipped — useful, and easy to misread as an error.
 - Mobile does **not** show numeric RGB readouts on touch-hold. Desktop Classic does; do not tell the user to look for a number that is not there.
 
 **Clipping is not automatically wrong.** Specular highlights — sun on water, a light bulb, a chrome reflection — *should* clip. A clipped face or a clipped sky with visible structure is a problem. Judge by what is clipping, not by whether anything is.

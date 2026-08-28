@@ -34,7 +34,7 @@ Fine detail only, no midtone contrast shift, no color shift. The safest of the t
 
 - **Positive: +8 to +20.** Landscapes, fabric, architecture, hair.
 - **Negative: −15 to −30** smooths skin while keeping edges sharp — better than any blur, because eyes and lips stay crisp. The correct global skin-softening tool.
-- Texture does not create halos. It is the right answer whenever you are unsure between the three.
+- Texture is designed to avoid halos and rarely produces them even at strong settings, because it targets only fine, high-frequency detail. It is the right answer whenever you are unsure between the three.
 
 ### Clarity
 
@@ -43,7 +43,7 @@ Midtone local contrast. Adds presence, and adds it everywhere.
 - **+5 to +15 is the working range.** Above +20 it starts producing halos at high-contrast edges — a horizon, a backlit head against sky — and grey, dirty skin.
 - **Never above +10 on a face.** Clarity finds every pore and shadow and deepens all of them.
 - **Negative Clarity (−10 to −25)** is the dreamy, glowing, soft-focus look. Excellent on backlit portraits.
-- Clarity slightly desaturates. If an image goes flat after Clarity, that is why.
+- Clarity affects color more than Texture does, and images often look flat or grey at higher values. That is a widely observed side effect rather than a documented desaturation curve — but it is why an image can lose life after a Clarity push.
 
 ### Dehaze
 
@@ -52,13 +52,13 @@ Built for atmospheric haze. It applies broad contrast *and* saturation, and it a
 - **+5 to +15** recovers a hazy distance or a flat sky.
 - **Above +20 the sky goes cyan-black, shadows crush, and noise appears.** Check the shadows and the noise floor after every Dehaze move.
 - **Negative Dehaze (−10 to −30)** adds atmosphere and glow. It is the fastest way to a soft, hazy, misty look, and it pairs naturally with lifted blacks.
-- Dehaze runs before Detail in the pipeline, so tune sharpening and noise *after* it.
+- Dehaze shifts the apparent noise floor, so finalise sharpening and noise *after* it. This is workflow, not a documented internal ordering.
 
 **Stacking:** Texture +12 with Clarity +8 gives more apparent detail than Clarity +20, with none of the halos.
 
 ## Vignette
 
-Post-crop: it follows the crop, not the original frame. Applied after Optics, so it is independent of lens-profile vignette correction.
+Post-crop: it follows the crop, not the original frame. In practice it behaves independently of lens-profile vignette correction, so the two do not cancel — treat that as an observation, not a documented pipeline fact.
 
 | Sub-slider | Effect |
 |---|---|
@@ -91,7 +91,7 @@ Adds monochromatic grain. Genuinely useful beyond nostalgia: grain masks banding
 | Sub-slider | Effect |
 |---|---|
 | **Amount** | Strength. |
-| **Size** | Grain particle size. Above 25 Adobe adds slight blue to the grain so noise reduction interacts with it more gracefully. |
+| **Size** | Grain particle size. Larger values produce bigger, more visible clumps, like a faster film. |
 | **Roughness** | Irregularity. Low = uniform and digital. High = irregular and organic. |
 
 **Subtle film texture:**

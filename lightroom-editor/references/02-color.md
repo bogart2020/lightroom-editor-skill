@@ -7,11 +7,11 @@ White balance, vibrance/saturation, Color Mix (HSL), Color Grading, and profiles
 | Control | Range (RAW) | Range (JPEG/HEIC) | Default |
 |---|---|---|---|
 | Temp | 2000 … 50000 K | −100 … +100 | As Shot |
-| Tint | −150 … +150 | −150 … +150 | As Shot |
+| Tint | −150 … +150 | −100 … +100 | As Shot |
 | Vibrance | −100 … +100 | same | 0 |
 | Saturation | −100 … +100 | same | 0 |
 | Color Mix — Hue / Sat / Lum, per band | −100 … +100 each | same | 0 |
-| Color Grading — Hue | 0 … 360 | same | 0 |
+| Color Grading — Hue | 0 … 359 (wraps) | same | 0 |
 | Color Grading — Saturation | 0 … 100 | same | 0 |
 | Color Grading — Luminance | −100 … +100 | same | 0 |
 | Blending | 0 … 100 | same | 50 |
@@ -21,14 +21,14 @@ White balance, vibrance/saturation, Color Mix (HSL), Color Grading, and profiles
 
 **Adobe Color is the default and the right starting point.** It is Adobe's modern general-purpose rendering — pleasing contrast, believable skin, no strong opinion. Every recipe in this skill assumes it unless stated.
 
-Available for RAW: Adobe Color, Adobe Standard, Adobe Landscape, Adobe Portrait, Adobe Vivid, Adobe Neutral, Adobe Monochrome, plus **Camera Matching** profiles that emulate the manufacturer's own JPEG rendering (Camera Standard, Camera Neutral, Camera Portrait, and so on — availability varies by body). Newer versions add **Adobe Adaptive**, an AI per-image profile.
+Available for RAW: Adobe Color, Adobe Standard, Adobe Landscape, Adobe Portrait, Adobe Vivid, Adobe Neutral, Adobe Monochrome, plus **Camera Matching** profiles that emulate the manufacturer's own JPEG rendering (Camera Standard, Camera Neutral, Camera Portrait, and so on — availability varies by body). Newer versions add the **Adaptive** group — **Adaptive Color** and **Adaptive B&W** — AI per-image profiles that require RAW or DNG.
 
-For **JPEG/HEIC only Color and Monochrome exist.** The rendering is already baked in; there is no profile to swap.
+For **JPEG/HEIC the Basic group holds only Color and Monochrome** — the raw rendering is baked in, so Adobe Raw and Camera Matching are unavailable. Creative profiles (Artistic, B&W, Film-Inspired, Modern, Vintage) still apply to any file type and carry an Amount slider, but those are a *look*, not a baseline. Treat Color as the fixed starting point on non-raw files.
 
 **When to leave Adobe Color:**
 - **Adobe Standard** — flatter and more neutral. The better base when you are grading heavily and want Adobe's opinion out of the way.
 - **Camera Matching** — when the user wants the look they saw on the camera's rear screen. It genuinely helps some Sony and Nikon files. But it is a *different* rendering, not a fix: it trades Adobe's bias for the manufacturer's. Say that when you recommend it.
-- **Adobe Adaptive** — useful on computational RAW (ProRAW, Pixel), where the baked-in tone mapping fights fixed profiles.
+- **Adaptive Color** — often works better on computational RAW (ProRAW, Pixel), where baked-in tone mapping fights a fixed profile. This is a judgement call, not a documented recommendation.
 
 Profile changes everything downstream. Choose it first, then build.
 
@@ -36,7 +36,7 @@ Profile changes everything downstream. Choose it first, then build.
 
 **Temp and Tint own color casts. Nothing else does.** Correcting a cast with Color Mix or Color Grading leaves the error in the file and paints over it — the cast returns the moment you touch anything else.
 
-On RAW, Temp is a true Kelvin value and is fully non-destructive: any Kelvin is as valid as any other. On JPEG/HEIC it is a relative ±100 nudge around the baked-in value, and it degrades as you push it.
+On RAW, Temp is a true Kelvin value applied before demosaic, so it costs nothing across a normal range. Extreme settings still amplify one channel's noise and can push a channel to clip. On JPEG/HEIC it is a relative ±100 nudge around the baked-in value, and it degrades as you push it.
 
 **Presets:** As Shot, Auto, Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash, Custom. RAW gets all of them; JPEG/HEIC gets As Shot, Auto, and Custom only.
 
@@ -51,7 +51,7 @@ Most source casts are a **Tint** problem, not a Temp problem. Sony's green and C
 
 1. **Eyedropper on a true neutral** — concrete, white paint, grey clothing, the whites of eyes. Not skin, not sky, not foliage.
 2. **No neutral available?** Set Temp by feel on the subject, then fix the residual cast on Tint alone.
-3. **Golden hour is a trap.** Auto WB will neutralise the warmth that is the entire point of the photograph. Set it warm deliberately — usually **300–600 K above** what Auto chose.
+3. **Golden hour is a trap.** Auto WB will neutralise the warmth that is the entire point of the photograph. Start from Auto's value and push Temp up until the warmth reads as light rather than as a cast, then stop.
 
 ### Skin
 
@@ -107,11 +107,11 @@ If every band needs the same correction, the problem is white balance. Go back t
 
 ## Color Grading
 
-Four wheels — **Shadows, Midtones, Highlights, Global** — each with Hue (0–360), Saturation (0–100), Luminance (−100…+100). Plus two sliders that control how the wheels interact.
+Four wheels — **Shadows, Midtones, Highlights, Global** — each with Hue (0–359, wrapping), Saturation (0–100), Luminance (−100…+100). Plus two sliders that control how the wheels interact.
 
 **Blending (0–100, default 50)** — how much the three zones bleed into each other. Low = hard-edged separation between graded zones. High = smooth, subtle, everything blends. Raise it when the grade is showing edges; lower it when the grade looks washed out and undefined.
 
-**Balance (−100…+100, default 0)** — moves the dividing line between what counts as shadow and what counts as highlight. Negative gives more of the image to the Highlights wheel; positive gives more to Shadows. Use it when a grade is landing on the wrong part of the image.
+**Balance (−100…+100, default 0)** — weights the effect between the wheels. **Positive increases the effect of the Highlights wheel; negative increases the effect of the Shadows wheel.** Use it when a grade is landing on the wrong part of the image.
 
 ### Useful hue values
 
@@ -135,7 +135,7 @@ Four wheels — **Shadows, Midtones, Highlights, Global** — each with Hue (0�
 **Warm film:**
 - Shadows: Hue **30**, Sat **8**
 - Highlights: Hue **50**, Sat **12**
-- Balance **+10**
+- Balance **+10** — positive, so the warm Highlights wheel carries more of the grade
 
 **Faded matte:**
 - Shadows: Hue **210**, Sat **10**, Luminance **+8**

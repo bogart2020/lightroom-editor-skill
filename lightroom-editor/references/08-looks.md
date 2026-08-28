@@ -66,11 +66,13 @@ Work the readings back through the pipeline in order: endpoints → curve shape 
 
 ---
 
-## Route 2 — Film emulation
+## Route 2 — Film and simulation looks
 
-Starting points, not destinations. Adjust to the image.
+**Approximations, not emulations.** These are hand-built slider stacks that evoke the *impression* of a look. They are not derived from scans, measurements, spectral data, or any commercial preset pack. No slider recipe reproduces an emulsion's grain structure, spectral response, or halation. Treat them as starting points, adjust to the image, and tell the user that is what they are.
 
-These recipes are **original approximations** of how each stock reads — its contrast shape, cast per tonal zone, and per-band saturation. They are not derived from, and do not reproduce, any commercial preset pack, and they are not affiliated with the film manufacturers. Stock names are used descriptively to say what look is being aimed at. A recipe gets a photograph into the neighbourhood of a stock; it does not reproduce a film.
+Names are used descriptively to identify the look being approximated. All marks belong to their owners; these recipes are unaffiliated with and not endorsed by Kodak, Kodak Alaris, Fujifilm, CineStill or Harman/Ilford.
+
+### Actual film stocks
 
 **Kodak Portra — warm, soft, forgiving skin:**
 ```
@@ -94,18 +96,21 @@ Color Grading: Highlights Hue 50 Sat 14, Shadows Hue 40 Sat 6
 Grain: Amount 18  Size 26  Roughness 55
 ```
 
-**Fuji Classic Chrome — muted, cool, documentary:**
+### Fujifilm digital simulation modes
+
+These four are **Fujifilm's own in-camera simulations, not film stocks** — Classic Chrome is not based on any film at all. If the user shoots Fujifilm, `07-sources.md` applies: Adobe ships matched camera profiles that reach these looks far more accurately than sliders can.
+
+**Classic Chrome — muted, subtly warm, documentary:**
 ```
 Contrast +5   Highlights −18   Shadows −8   Whites +8   Blacks −14
 Curve: 0,4  72,64  128,126  186,190  255,246
-Blue curve: 0,8
-Vibrance −5   Saturation −12
-Red Sat −16   Orange Sat −14   Yellow Sat −18   Green Sat −22   Green Hue +12
-Aqua Hue +8   Blue Sat −10   Blue Lum −8
-Color Grading: Shadows Hue 200 Sat 8, Highlights Hue 45 Sat 5, Blending 55
+Vibrance −5   Saturation −10
+Red Sat −6   Orange Sat −4   Yellow Sat −14   Green Sat −22   Green Hue +12
+Aqua Hue +8   Blue Sat −12   Blue Lum −8
+Color Grading: Highlights Hue 42 Sat 6, Shadows Hue 40 Sat 4, Blending 55
 ```
 
-**Fuji Classic Negative — punchy shadows, shifted greens, distinctive:**
+**Classic Negative — punchy shadows, shifted greens, distinctive:**
 ```
 Contrast +12   Highlights −25   Shadows −10   Blacks +8
 Curve: 0,8  64,56  128,128  192,200  255,250
@@ -114,7 +119,7 @@ Green Hue +25   Green Sat −20   Aqua Hue −15   Orange Sat −10
 Color Grading: Shadows Hue 200 Sat 10, Highlights Hue 40 Sat 8
 ```
 
-**Fuji Eterna — flat cinema stock:**
+**Eterna — flat, low-saturation cinema rendering:**
 ```
 Contrast −30   Highlights −30   Shadows +30   Whites −10   Blacks +20
 Curve: 0,18  128,128  255,238
@@ -122,7 +127,7 @@ Saturation −18   Vibrance +8
 Color Grading: Shadows Hue 210 Sat 12, Highlights Hue 45 Sat 8, Blending 60
 ```
 
-**Cinestill 800T — tungsten-balanced, cyan shadows, halated highlights:**
+**Tungsten cinema look — 3200K-balanced, cool shadows:**
 ```
 Temp −400K from neutral   Tint +4
 Contrast +8   Blacks +14
@@ -131,6 +136,8 @@ Color Grading: Shadows Hue 195 Sat 18, Highlights Hue 20 Sat 10
 Aqua Sat +12   Orange Sat −8
 Grain: Amount 22  Size 30  Roughness 60
 ```
+
+The red halation around point lights is the signature of this stock and **cannot be produced with global sliders** — it is a localized bloom around highlights, not a highlight tint. Say so rather than pushing Color Grading Highlights further.
 
 **Ilford HP5 — black and white, classic:**
 ```
@@ -141,7 +148,7 @@ B&W Mix: Red +20  Orange +25  Yellow +15  Blue −25  Aqua −15
 Grain: Amount 28  Size 34  Roughness 60
 ```
 
-**Fuji Acros — black and white, smooth, fine grain:**
+**Acros — black and white, smooth, fine grain:**
 ```
 Profile: Adobe Monochrome
 Contrast +8   Highlights −20   Shadows +15   Blacks −8

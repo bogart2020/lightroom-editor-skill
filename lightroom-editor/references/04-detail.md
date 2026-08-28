@@ -30,7 +30,7 @@ The four sliders do genuinely different jobs. Moving Amount alone is why over-sh
 - **Detail** — how much fine, high-frequency information gets sharpened. **High Detail sharpens noise along with detail.** Lower it on noisy files.
 - **Masking** — restricts sharpening to edges only, leaving smooth areas untouched. **The most valuable of the four and the least used.** Masking 0 sharpens sky, skin and out-of-focus background as hard as it sharpens the subject.
 
-Mobile does not offer the desktop's Alt/Option-drag black-and-white mask preview. Set Masking by reasoning about the subject rather than by looking at the mask.
+Mobile has no Alt/Option key, but it has the same preview: **hold two fingers on the Masking slider while dragging, then tap the screen** to bring up the black-and-white mask. White is sharpened, black is protected. Look at the mask rather than guessing at it.
 
 ### Starting points
 
@@ -86,7 +86,7 @@ Color noise reduction is nearly free. When shadows look colour-speckled, raise t
 
 Adobe's machine-learning denoiser is a different and far better tool than the sliders — it produces a new DNG rather than adjusting the existing one.
 
-Availability on mobile is restricted: **iPad on Apple silicon with sufficient memory**, RAW files only. It is generally **not available on iPhone or Android phones**. Do not prescribe it as a step for a phone-only workflow; mention it as an option only when the user has an iPad.
+Availability on mobile is narrow: **iPad Pro or iPad Air with an M1 chip or later** and 8 GB+ RAM, RAW/DNG only. The base iPad and iPad mini run A-series chips and are excluded, so "Apple silicon" is too broad a test. Not available on iPhone or Android as of Lightroom mobile 11.5 (August 2026). Do not prescribe it for a phone-only workflow, and recheck availability — Adobe has been expanding it.
 
 ## Working order within Detail
 

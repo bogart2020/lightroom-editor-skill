@@ -4,14 +4,14 @@ The stage everyone skips. It runs early because lens correction changes geometry
 
 ## Optics
 
-Three controls on mobile.
+Three controls on every mobile platform — plus more on Android. **Android** additionally exposes manual **Distortion** and **Lens Vignetting** override sliders and manual lens-profile (Make / Model / Profile) selection under Optics. **iOS and iPadOS do not**, and this has been a long-standing feature request. Ask which platform the user is on before saying a control does not exist.
 
 ### Enable Lens Corrections
 
 Applies Adobe's profile for the lens recorded in EXIF: corrects barrel/pincushion **distortion** and **corner vignetting**.
 
 - **Turn it on by default.** It is a correction toward what the lens actually saw.
-- Lightroom matches the profile automatically from EXIF. Mobile does not let you browse and pick a profile by hand the way desktop does — if no profile exists for the lens, the toggle simply has no effect.
+- Lightroom matches the profile automatically from EXIF. On **iOS/iPadOS** you cannot browse and pick a profile by hand — if no profile exists for the lens, the toggle simply has no effect. On **Android** you can select Make/Model manually, which rescues adapted and unrecognised lenses.
 - **Phone files (ProRAW, Pixel, HEIC) already have it applied in-camera.** The toggle usually does nothing. That is expected, not a failure.
 - **Adapted, vintage and manual lenses often have no profile.** Nothing happens; correct the distortion by hand in Geometry if it matters.
 - Corner vignette correction brightens corners, which **raises corner noise**. On a high-ISO file, check the corners after enabling it.
@@ -43,7 +43,7 @@ Runs after Optics because it operates on the corrected image.
 - **Full** — level plus vertical plus aspect. Aggressive; heavy cropping.
 - **Guided** — draw two to four reference lines yourself. The most controlled, and the right answer for architecture where Auto guesses wrong.
 
-Manual sliders: Distortion, Vertical, Horizontal, Rotate, Aspect, Scale, X Offset, Y Offset.
+Manual sliders: Distortion, Vertical, Horizontal, Rotate, Aspect, Scale, X Offset, Y Offset. Guided Upright takes two to four reference lines (four maximum).
 
 **Geometry costs resolution.** Every correction crops. On a 12 MP phone file that matters; on a 45 MP file it does not.
 

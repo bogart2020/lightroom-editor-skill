@@ -10,7 +10,7 @@ Photo editing in Adobe Lightroom mobile, driven by two ideas in fixed order:
 
 **Baseline before look.** Every file arrives with its *source* character already baked in — a cast, a tone-mapping decision, a sharpening pass someone else chose. Neutralise that first and you are grading a clean image. Skip it and every creative move fights an error you never named.
 
-**Restraint.** Numbers here are print-grade: they survive scrutiny, and they still look right in two years. When a stronger move is available, name it and let the user ask for it.
+**Restraint.** Numbers here are deliberately conservative house limits, not Adobe figures — they are chosen so an edit survives scrutiny at full size. When a stronger move is available, name it and let the user ask for it.
 
 ## Scope
 
@@ -97,7 +97,7 @@ Each of these means stop and correct course:
 - About to give a range instead of a number → pick the number.
 - About to prescribe without knowing the source → ask; the source decides the baseline.
 - Fixing a color cast with Color Mix or Color Grading → white balance owns casts. Correct it upstream.
-- Pushing Shadows past +30 on Apple ProRAW or Pixel DNG → the tone mapping already lifted them; this is where the flat HDR look comes from.
-- Recommending Clarity above +15 or Dehaze above +10 → restraint. If the image truly needs more, say why.
+- Pushing Shadows past +30 on Apple ProRAW or Pixel DNG → the phone already lifted them, and re-lifting is the usual cause of the flat HDR look. +30 is this skill's house limit; the real ceiling is wherever shadow noise appears at 100%.
+- Recommending Clarity above +15 or Dehaze above +10 → these are house limits, not hard rules. If the image truly needs more, say why.
 - Judging sharpening or noise at fit-to-screen → both are 100%-zoom decisions.
 - Offering a preset that carries Exposure, Temp, or Tint → those are per-photo. A portable preset omits them.

@@ -4,6 +4,8 @@ Masking is where a competent edit becomes a good one. **Reach for a mask the mom
 
 Masking requires a paid Lightroom subscription. Confirm the user has it before building a recipe that depends on it.
 
+Subscription is not the only variable: the AI masks (Select Subject, Sky, Background, Objects, People) are additionally gated by device capability on Android, and are reported missing on lower-RAM devices. If a subscribed user cannot find Select Subject, ask what device they are on before assuming a billing problem.
+
 ## Mask types
 
 | Type | What it selects | Use for |
@@ -18,9 +20,9 @@ Masking requires a paid Lightroom subscription. Confirm the user has it before b
 | **Radial Gradient** | An ellipse, invertible | Drawing attention to a face or subject |
 | **Color Range** | Pixels near a sampled color | One color anywhere in the frame |
 | **Luminance Range** | Pixels within a brightness band | Highlights or shadows only |
-| **Depth Range** | Distance, on files with depth data | ProRAW and other depth-carrying files |
+| **Depth Range** | Distance, on files carrying a depth map | Depth comes from the *capture mode* (iPhone Portrait mode, dual-camera HEIC), not from the RAW format — a ProRAW file is not inherently depth-carrying |
 
-**Select People sub-masks:** Facial Skin, Body Skin, Eyebrows, Eye Sclera, Iris and Pupil, Lips, Teeth, Hair, Clothing. Facial Skin is the important one — it excludes eyes, lips and hair automatically, which no brush does reliably.
+**Select People sub-masks:** Entire Person, Facial Skin (labelled Face Skin in some builds), Body Skin, Eyebrows, Eye Sclera, Iris and Pupil, Lips, Teeth, Hair, Clothes. Facial Skin is the important one — it excludes eyes, lips and hair automatically, which no brush does reliably.
 
 ## Combining masks
 

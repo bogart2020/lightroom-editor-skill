@@ -2,6 +2,8 @@
 
 For critiquing an edit, and for the check-yourself list that ends every recipe.
 
+Every number below is a starting point to judge against the actual image, not a constant. Give the user the number — vague direction is worse than a number they can adjust — but expect to move it once you see the result.
+
 ## Failure signatures
 
 Each entry: what the user sees, what actually caused it, what fixes it. Work from the symptom.
@@ -56,7 +58,7 @@ Each entry: what the user sees, what actually caused it, what fixes it. Work fro
 
 ### Banding in skies or gradients
 
-**Cause:** An 8-bit JPEG pushed hard, most often by a tone slider or heavy Dehaze.
+**Cause:** Usually an 8-bit JPEG pushed hard, most often by a tone slider or heavy Dehaze — quantisation made visible by a steep tone move. Higher bit depths band far less, but will still band under extreme moves.
 
 **Fix:** Reduce the move that caused it. Add **Grain 12–15**, which hides banding effectively. If the file is JPEG, say that the ceiling is the file, not the edit.
 

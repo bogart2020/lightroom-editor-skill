@@ -10,12 +10,12 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 
 | File | Headroom | Practical limit |
 |---|---|---|
-| True Bayer RAW (Sony, Canon, Nikon, Fuji, Panasonic, Leica) | High | ~1 stop highlight recovery, Shadows to +40 |
-| Computational RAW (Apple ProRAW, Pixel DNG) | Low–medium | Shadows to +30 max; highlights largely already spent |
+| True Bayer RAW (Sony, Canon, Nikon, Fuji, Panasonic, Leica) | High | Commonly 1–2 stops of highlight recovery depending on body, ISO and how cleanly the channels clipped; shadows tolerate large lifts before noise dominates |
+| Computational RAW (Apple ProRAW, Pixel DNG) | Mixed | *Shadow* latitude is largely spent — that is the constraint. Highlight headroom is retained and reachable; see the ProRAW section |
 | HEIC (10-bit) | Low | Small moves; some banding resistance |
-| JPEG (8-bit) | Very low | Clipped is gone; bands visibly past ±30 on tone sliders |
+| JPEG (8-bit) | Very low | Clipped is gone; banding appears quickly on smooth gradients — check skies after every tonal move |
 
-**The headroom rule:** a computational RAW looks like a RAW and edits like a JPEG that happens to be 12-bit. Treat it accordingly.
+**The headroom rule:** a computational RAW is a real raw container — true Kelvin white balance, 12-bit linear encoding, full profile support — but most of its *tonal* latitude has already been spent. Push color and highlights like a raw; push shadows like a JPEG.
 
 ---
 
@@ -24,18 +24,19 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 **What it is:** not a virgin Bayer file. ProRAW is a *linear* DNG that has already been demosaiced, multi-frame merged (Deep Fusion, Smart HDR, Night mode), locally tone-mapped, sharpened, and noise-reduced. Apple's entire computational pipeline ran before the file was written. You are editing Apple's rendering, in a container that gives you raw-like white balance and 12-bit depth.
 
 **Character:**
-- **Shadows are already lifted and highlights already compressed.** The local tone mapping spent most of the dynamic range for you.
-- **Halos around high-contrast edges** — a rim-lit head against sky, a horizon, a backlit branch. Baked in by the local tone mapping; not removable, and Clarity/Dehaze make them worse.
+- **Shadows are already lifted.** The local tone mapping spent that latitude for you, so a second lift buys nothing.
+- **Highlights are tone-mapped, not clipped.** Apple deliberately underexposes in high-contrast scenes to protect highlights, and the above-SDR values are still in the file. Lightroom exposes an **Apple ProRAW Amount** slider controlling how much of that range gets compressed into SDR. Highlight headroom is the one thing ProRAW keeps.
+- **Halos around high-contrast edges** — a rim-lit head against sky, a horizon, a backlit branch. Baked in by the local tone mapping and Apple's sharpening. Hard to remove: backing off Sharpening and masking the affected edge helps, global sliders do not, and Clarity/Dehaze make them worse.
 - **Watercolour texture** in foliage, fabric and fine detail, from aggressive noise reduction plus sharpening.
-- **Warm, slightly yellow skin rendering**, and skies pushed toward cyan.
-- **Semantic per-region processing** — faces and skies are processed differently from the rest of the frame, so a global move can land unevenly.
+- **Highlights commonly read yellow** on the Apple ProRAW profile.
+- **Semantic per-region processing** — Apple segments people, skin and sky during capture, processes them differently, and stores those masks in the DNG. The uneven starting point is real. Lightroom does not consume the masks, so you cannot undo the segmentation, only compensate locally.
 
 **Editing implications:**
-- **Shadows above +30 is the mistake.** This is the single biggest cause of the flat, grey, "phone HDR" look. The phone already lifted them; lifting again removes the last dimension and exposes the noise floor.
+- **Lifting Shadows again is the mistake** — the usual cause of the flat, grey, "phone HDR" look. The phone already lifted them, so a second lift removes the last dimension and exposes the noise floor. There is no fixed ceiling: check shadow noise at 100% and stop when it appears, which is well below where you would stop on a Bayer file. This skill's house limit is +30.
 - Add contrast in the **tone curve**, not in Shadows/Highlights. Deepening blacks with Blacks −10 to −20 restores far more dimension than any recovery slider.
 - **Sharpening Amount around 15.** Full sharpening on an already-sharpened file produces crunch.
 - Lens correction is already applied in-camera; the Optics toggle usually does nothing.
-- **Adobe Adaptive** is often a better profile than Adobe Color here, because a fixed profile fights the baked-in tone mapping. Adobe Color remains the safe default.
+- **Lightroom opens a ProRAW file on Apple's own "Apple ProRAW" profile.** Switching to Adobe Color or Adaptive Color frequently drops the image noticeably darker, because Apple underexposed the capture to protect highlights and its own profile compensates. Expect to add roughly +0.3 to +0.7 Exposure when you leave the Apple profile, and judge the profile choice after that, not before.
 - ProRAW Max (48 MP) is the same pipeline at higher resolution — same character, more detail, larger files.
 
 **Plain HEIC from an iPhone** is the same rendering with the white balance baked and 10 bits: everything above applies, with much less latitude.
@@ -47,15 +48,16 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 **What it is:** a true Bayer RAW. Full headroom.
 
 **Character:**
-- **A green cast in Adobe's rendering**, widely reported, strongest in shadows and midtones and most visible in skin, where it reads as sallow on light skin and ashy or grey on deep skin. It is a property of how Adobe renders Sony's color, not of the exposure. Newer bodies (a7 IV, a1, a7R V era) are noticeably better than older ones, and it persists to some degree.
+- **A green / yellow-green cast in Adobe's rendering**, reported consistently since the a7 III / a7R III era, most visible in skin — sallow on light skin, ashy or grey on deep skin. It is a property of Adobe's calibration, not of the exposure; the same files are widely reported to render more cleanly in other converters. Whether newer bodies are better is *not established* — treat generational claims as unverified.
+- A separate, sharper green shift introduced in Lightroom 10.3 was acknowledged by Adobe and fixed in 10.4. Do not confuse the two.
 - Excellent dynamic range and highlight retention.
 - Some compressed RAW modes carry historical artefacts; lossless compressed is the safe capture setting.
 
 **Editing implications:**
-- **Fix the green on Tint, not Temp.** Green lives on the green↔magenta axis. Typical correction: **Tint +5 to +12** toward magenta. Reaching for Temp produces a warm *and* green image, which is worse.
+- **Fix the green on Tint, not Temp.** Green lives on the green↔magenta axis. Set the amount by eye against a known neutral; corrections are typically small, but read the image rather than typing a number. Reaching for Temp produces a warm *and* green image, which is worse.
 - If green persists only in the shadows after Tint is correct, pull the **Green channel curve's lower third down slightly** (`01-light.md`). That is a zonal cast, and white balance cannot fix a zonal cast.
 - **Do not fix it with Color Mix `Green Sat −25`.** That desaturates real greens — foliage, grass — and leaves the skin cast in place.
-- **Camera Matching** profiles help some bodies noticeably. Offer it as an alternative rendering, while noting it replaces Adobe's opinion with Sony's rather than fixing anything.
+- **Camera Matching is worth auditioning but is not a fix.** The Sony Camera Standard/Portrait profiles are themselves reported to carry the green. Offer it as an alternative rendering to try, not as a correction.
 
 ---
 
@@ -64,13 +66,13 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 **What it is:** a true Bayer RAW. Full headroom.
 
 **Character:**
-- **A magenta/pink shift** in Adobe's rendering of CR3, most visible in skin and neutrals.
+- **A magenta/pink shift** in Adobe's rendering of CR3, most visible in skin and neutrals. This is community consensus rather than documented Adobe behaviour — verify it on the actual file before prescribing a correction.
 - Canon's own color science is widely preferred for skin; Adobe's rendering of it is commonly described as flatter and more washed out than what the camera's own JPEG produces.
 - Gentle, pleasing highlight rolloff.
-- **Camera Matching profiles are sparse for CR3 bodies.** Do not assume they exist for the user's camera.
+- **Camera Matching profiles now exist for most CR3 bodies** (added from Lightroom Classic 11.0 onward), though coverage still lags new releases. Check the profile list rather than assuming either way.
 
 **Editing implications:**
-- **Correct the magenta on Tint: −3 to −8** toward green. Small numbers; Canon's magenta is milder than Sony's green.
+- **Correct the magenta on Tint**, toward green. Small numbers; Canon's magenta is milder than Sony's green. Judge against a neutral rather than typing a fixed value.
 - Adobe Color often reads flat on Canon files. **Vibrance +10 to +15** and a gentle S-curve recover the character people expect from Canon, without pushing Saturation.
 - Skin usually needs *less* warming than instinct suggests — the magenta already reads as warmth.
 
@@ -82,7 +84,7 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 
 **Character:** the most neutral of the major systems in Adobe's rendering. No widely reported cast. Good shadow recovery. Camera Matching profiles read Nikon's Picture Controls faithfully and are a genuinely good starting point.
 
-**Editing implications:** treat as the reference case. If a Nikon file looks wrong, it is the exposure or the lighting, not the source. Note that the newest Z-body "Flexible Color" profiles are not supported in Lightroom — if a user's in-camera look does not carry over, that is why.
+**Editing implications:** treat as the reference case. If a Nikon file looks wrong, it is the exposure or the lighting, not the source. Lightroom does offer a **Camera Flexible Color** profile for the Z6III, Zf and Z50II, but it does not reproduce the in-camera recipe accurately. If a user's in-camera look does not carry over, that is why — the profile exists, the match does not.
 
 ---
 
@@ -96,7 +98,7 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 
 **Editing implications:**
 - **Keep Sharpening Detail low (15–25) and Radius around 1.0.** High Detail values are what surface the worms.
-- **Enhance Details** (where available) re-demosaics the file and substantially improves X-Trans rendering. Worth recommending for landscape and foliage.
+- **Enhance → Raw Details** re-demosaics the file and substantially improves X-Trans rendering, but it is **desktop-only** — Lightroom Classic, Lightroom desktop, Camera Raw. It is **not available in Lightroom on iPhone or Android**, so do not prescribe it in a mobile workflow. (Denoise reached select M-series iPads in 11.5; Raw Details did not.) On mobile, control the worms with Sharpening Detail instead.
 - Adobe ships film-simulation-matched profiles (Provia, Velvia, Astia, Classic Chrome, Acros, Eterna, Classic Negative). If the user shoots Fuji and wants the Fuji look, those profiles get there faster than any slider recipe.
 
 ---
@@ -105,9 +107,9 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 
 **What it is:** the same category as Apple ProRAW — HDR+ multi-frame merging and tone mapping baked into a DNG.
 
-**Character:** pre-lifted shadows, compressed highlights, aggressive noise reduction and sharpening, and Google's characteristic contrastier, cooler rendering. Adobe's profile support is thinner than for Apple; **Adobe Color may not be offered** on some Pixel DNGs, where only Adaptive Color and Monochrome appear.
+**Character:** pre-lifted shadows and compressed highlights, as with ProRAW. Google's HDR+ pipeline is generally reported as *less* prone to the watercolour smearing seen in Apple's files, so treat detail on a Pixel DNG as better preserved than on a ProRAW until you check at 100%. Adobe's profile support is thinner than for Apple; **Adobe Color may not be offered** on some Pixel DNGs, where only Adaptive Color and Monochrome appear.
 
-**Editing implications:** identical to ProRAW. Shadows capped around +30, contrast in the curve, minimal sharpening. If Adobe Color is unavailable, use **Adaptive Color** and say why.
+**Editing implications:** as ProRAW for shadows — do not re-lift them — with contrast built in the curve and minimal sharpening. If Adobe Color is unavailable, use **Adaptive Color** and say why.
 
 ---
 
@@ -169,4 +171,4 @@ Push Highlights to −100 briefly. If detail returns, the file has real headroom
 
 Already-sharpened files show halos on edges. Already-denoised files show waxy, detail-free texture. Both mean: minimal sharpening, no noise reduction.
 
-That method covers every source, including ones that do not exist yet.
+The method is source-agnostic: it reads the file rather than looking up the camera.

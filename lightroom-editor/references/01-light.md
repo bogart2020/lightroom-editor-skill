@@ -1,13 +1,13 @@
 # Light
 
-All six tone sliders and the tone curve. Ranges are Lightroom mobile, current version.
+All six tone sliders and the tone curve. Ranges verified against Adobe documentation, August 2026. Temp and Tint differ between raw and non-raw files — see `02-color.md`.
 
 ## Quick reference
 
 | Control | Range | Default | Owns |
 |---|---|---|---|
 | Exposure | −5.00 … +5.00 EV | 0 | Overall brightness, whole range |
-| Contrast | −100 … +100 | 0 | Midtone separation around a fixed mid pivot |
+| Contrast | −100 … +100 | 0 | Midtone separation; the pivot is Adobe's, not yours |
 | Highlights | −100 … +100 | 0 | Bright zone recovery, below the white point |
 | Shadows | −100 … +100 | 0 | Dark zone recovery, above the black point |
 | Whites | −100 … +100 | 0 | The white endpoint |
@@ -20,7 +20,7 @@ All six tone sliders and the tone curve. Ranges are Lightroom mobile, current ve
 Overall brightness in stops. Move this before anything else tonal.
 
 - Judge exposure on **the subject**, not the histogram. A correctly exposed backlit portrait has a bright, clipped background — that is the scene, not an error.
-- On RAW roughly a stop of highlight recovery exists above what the preview shows. On JPEG/HEIC there is none: clipped is gone.
+- RAW usually holds highlight detail above what the preview shows — commonly one to two stops, varying by body, ISO, and how cleanly the channels clipped. On JPEG/HEIC there is none: clipped is gone.
 - Typical corrective range: **−0.50 to +0.80**. Past ±1.5 stops, ask whether the file is salvageable rather than pushing further.
 
 ## Whites and Blacks — the endpoints
@@ -40,12 +40,12 @@ These compress detail back into range without moving the endpoints.
 
 - **Highlights negative** recovers sky, skin speculars, bright cloud. **−20 to −45** is normal on a bright file.
 - **Shadows positive** opens dark areas. **+15 to +35** is normal on a true Bayer raw.
-- **Shadows above +50 is a red flag on any file, and above +30 on computational RAW** (Apple ProRAW, Pixel DNG). Those phones already lifted the shadows. Lifting again is exactly what produces the grey, dimensionless "HDR" look, and it exposes the noise floor the phone's noise reduction was hiding.
+- **House limit: Shadows +50 on any file, +30 on computational RAW** (Apple ProRAW, Pixel DNG). These are this skill's conservative ceilings, not Adobe figures — the real ceiling is wherever shadow noise appears at 100%. Those phones already lifted the shadows. Lifting again is exactly what produces the grey, dimensionless "HDR" look, and it exposes the noise floor the phone's noise reduction was hiding.
 - Heavy Highlights *and* heavy Shadows together flattens the image. If both are past ±40, the image wants a mask, not more global recovery.
 
 ## Contrast
 
-A single symmetric S around a fixed midpoint. Blunt but honest.
+A single symmetric S weighted on the midtones. Blunt but honest — you do not choose where it bites, and Adobe documents the weighting as adaptive rather than fixed.
 
 - **+10 to +25** for a flat file. **Negative Contrast** is the fastest route to a soft portrait or a matte look.
 - Contrast slightly raises apparent saturation. Set it before judging Vibrance.
@@ -53,11 +53,11 @@ A single symmetric S around a fixed midpoint. Blunt but honest.
 
 ## Tone Curve
 
-Two modes on mobile: **Parametric** (four zone sliders with movable split points) and **Point** (draggable points on a 0–255 grid). The Point curve carries four channels: **RGB composite**, **Red**, **Green**, **Blue**.
+Two modes on mobile: **Parametric** (drag the curve regions — Highlights, Lights, Darks, Shadows — plus range split sliders) and **Point** (draggable points). The Point curve carries four channels, labelled in the mobile UI as **White Channel** (all three at once), **Red Channel**, **Green Channel**, **Blue Channel**. A user hunting for "RGB" will be looking for a label that is not there.
 
-Points are dragged; mobile has no numeric entry. Describe points as `input,output` on the 0–255 grid.
+Points are dragged; **mobile shows no numbers on the curve at all** and has no numeric entry. The `input,output` pairs below are the 0–255 scale Lightroom stores in XMP and displays in Classic — on mobile, use them as positions to eyeball, then judge the result on the image.
 
-### Composite curve — contrast shape
+### White Channel curve — contrast shape
 
 The classic gentle S. Stronger than Contrast +20, far more controllable:
 

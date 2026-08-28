@@ -194,6 +194,8 @@ Adobe Color profile, portable, ready to fill in. This is a complete valid file.
 
 Generate `crs:UUID` fresh per preset — 32 uppercase hex characters. Reusing one makes Lightroom treat two presets as the same preset.
 
+`crs:Version` records which Lightroom version authored the preset. It is cosmetic, not a compatibility gate — an older value imports fine, so leave it or omit it rather than chasing the current release. `crs:ProcessVersion="11.0"` is the meaningful one and is current.
+
 ## Attribute map
 
 | Control | Attribute | Notes |
@@ -239,7 +241,7 @@ Three traps in this table, all verified against real preset files:
 
 ## Other profiles
 
-Swap `crs:Name` inside `<crs:Look>`. Each Adobe profile has its own UUID; if you do not have the correct one, omit `crs:UUID` and `crs:Stubbed` and keep `crs:Name` — Lightroom resolves the profile by name.
+Swap `crs:Name` inside `<crs:Look>`. Each Adobe profile has its own UUID; if you do not have the correct one, omit `crs:UUID` and `crs:Stubbed` and keep `crs:Name`. Lightroom then resolves the profile by name — this is how community preset generators emit non-default profiles, though Adobe does not document the fallback explicitly.
 
 ```xml
 <crs:Look>
@@ -259,7 +261,7 @@ Set `crs:ConvertToGrayscale="True"`, use the `Adobe Monochrome` profile, and wri
 
 1. Save the file with a `.xmp` extension.
 2. Get it onto the phone — AirDrop, email, Google Drive, or Files.
-3. **If it arrived as a `.zip`, extract it first.** Lightroom mobile cannot read a zip.
+3. **If it arrived as a `.zip`, extract it first.** Older Lightroom mobile versions cannot read a zip; recent versions reportedly can. Extracting always works, so extract rather than testing the version.
 4. In Lightroom, open any photo → **Edit** → **Presets** → **Yours** → **⋯** → **Import Presets**.
 5. Navigate to the file and select it. It appears under **User Presets**.
 
