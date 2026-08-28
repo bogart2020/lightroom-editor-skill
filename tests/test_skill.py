@@ -217,15 +217,29 @@ def layer3_corpora():
              "references/ is gitignored private material (leak-check enforces "
              "this) — clone-only checkouts cannot run it")
 
+    # NOTE: this corpus lives outside the repo and is mutable, so it cannot
+    # anchor a regression assertion — the immutable anchor for the tone-curve
+    # bug is the mutation test in layer 2. What is asserted here is the durable
+    # invariant the repair established: no preset carries a curve that
+    # Lightroom would discard.
     old = sorted(Path.home().glob("Desktop/creatives/presets/*.xmp"))
     if not old:
-        skip("pre-fix preset corpus", "no ~/Desktop/creatives/presets on this machine")
-    if old:
+        skip("local preset corpus", "no ~/Desktop/creatives/presets on this machine")
+    else:
+        orphaned = []
+        for p in old:
+            t = p.read_text()
+            if "ToneCurvePV2012" in t and "ToneCurveName2012" not in t:
+                orphaned.append(p.name)
+        check(f"no preset in the {len(old)}-file corpus has a discarded tone curve",
+              not orphaned,
+              f"{len(orphaned)} preset(s) carry a curve Lightroom would drop: "
+              f"{orphaned[:4]}")
         rc, out = run_check(*old)
-        n = re.search(r"RED — (\d+) of (\d+)", out)
-        check(f"the {len(old)} pre-fix presets are still detected as broken",
-              rc == 1 and n and int(n.group(1)) == int(n.group(2)),
-              "expected every pre-fix preset to fail; " + out.strip()[-200:])
+        n = re.search(r"(\d+) of (\d+) preset", out)
+        remaining = int(n.group(1)) if n else 0
+        print(f"          (informational: {remaining}/{len(old)} still fail on "
+              f"other grounds — per-photo settings baked into older presets)")
 
 
 # ---------------------------------------------------------------- layer 4
