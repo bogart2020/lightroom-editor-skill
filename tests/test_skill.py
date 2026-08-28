@@ -5,8 +5,11 @@ Every test here corresponds to a bug that reached a user. Each one is
 written to go RED against the skill as it stood before the fix, so the
 suite proves the fix rather than describing it.
 
-    tests/test_skill.py            run everything
-    tests/test_skill.py --pre-fix  run the document tests against git HEAD
+    tests/test_skill.py             run everything
+    tests/test_skill.py --pre-fix   run the document tests against the commit
+                                    before this branch (default: merge-base
+                                    with main), proving they go red there
+    tests/test_skill.py --pre-fix REF   use an explicit ref
 """
 import os, re, subprocess, sys, tempfile, xml.etree.ElementTree as ET
 from pathlib import Path
@@ -34,10 +37,24 @@ def skip(name, why):
     print(f"  SKIP  {name}\n          {why}")
 
 
+def baseline_ref():
+    """The commit this branch forked from — never HEAD, which would compare
+    the fix against itself and report a meaningless green."""
+    if "--pre-fix" in sys.argv:
+        i = sys.argv.index("--pre-fix")
+        if i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith("-"):
+            return sys.argv[i + 1]
+    mb = subprocess.run(["git", "merge-base", "HEAD", "main"], cwd=ROOT,
+                        capture_output=True, text=True)
+    return mb.stdout.strip() or "main"
+
+
 def read(rel, pre_fix=False):
     if pre_fix:
-        out = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=ROOT,
+        out = subprocess.run(["git", "show", f"{baseline_ref()}:{rel}"], cwd=ROOT,
                              capture_output=True, text=True)
+        if out.returncode != 0:
+            sys.exit(f"cannot read {rel} at {baseline_ref()}: {out.stderr.strip()}")
         return out.stdout
     return (ROOT / rel).read_text()
 
@@ -48,7 +65,7 @@ def xml_blocks(md):
 
 # ---------------------------------------------------------------- layer 1
 def layer1_document(pre_fix=False):
-    tag = " (pre-fix, at git HEAD)" if pre_fix else ""
+    tag = f" (baseline {baseline_ref()[:8]})" if pre_fix else ""
     print(f"\nLAYER 1 — document invariants{tag}")
     xmp = read("skills/lightroom-editor/references/09-presets-xmp.md", pre_fix)
     skl = read("skills/lightroom-editor/SKILL.md", pre_fix)
