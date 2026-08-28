@@ -29,7 +29,10 @@ fi
 [ "$found" -eq 1 ] && fail=1 || echo "  ok"
 
 echo "== 2. git history authorship =="
-bad=$(git log --format='%ae%n%ce' 2>/dev/null | sort -u | grep -v 'users\.noreply\.github\.com' | wc -l | tr -d ' ')
+# GitHub's own address appears on the synthetic merge commit CI builds for a
+# pull request. It is not a personal identifier, so it is not a leak.
+bad=$(git log --format='%ae%n%ce' 2>/dev/null | sort -u \
+      | grep -vE 'users\.noreply\.github\.com|^noreply@github\.com$' | wc -l | tr -d ' ')
 if [ "${bad:-0}" -gt 0 ]; then
   echo "  FAIL: $bad non-noreply author/committer address(es) in history"; fail=1
 else
