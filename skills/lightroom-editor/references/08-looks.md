@@ -10,6 +10,36 @@ Four routes: decompose a reference image, emulate film, apply a named modern loo
 
 The method for "make my photo look like this one." Read the reference in this order; each answer maps to a specific control.
 
+### 0. Pin the reference set, and pin the target
+
+Two questions come before any reading, and getting either wrong invalidates
+everything downstream.
+
+**Which images are the reference?** One look, not one artist. A reference set is
+frames that share a single grade — the same shoot, the same treatment. An album
+cover plus press photos plus search-results thumbnails is not a set; averaging
+them yields a range that describes none of them, and the recipe you derive will
+match nothing. Prefer **one primary reference**: the image the user actually
+pointed at. Add more only when they demonstrably carry the same grade.
+
+`scripts/look-match.py` measures the saturation-weighted 10th–90th percentile of
+hue and **refuses a set whose frames' means differ by more than 12°**. If it
+refuses, the set is the problem, not the preset.
+
+**How close should the result land?** The reference is not automatically the
+target. A user who says "warm, leaning golden" while holding up a cover that
+measures 31–40° wants something 5–10° warmer than the thing they showed you.
+Get the deviation as a number, and check the preset against
+*reference + deviation*, not against the reference:
+
+```
+scripts/look-match.py --warmer 8 REFERENCE.jpg PRESET.xmp
+```
+
+Write the deviation into the preset's description or the build notes. Nothing in
+the `.xmp` records it, so an unrecorded deviation is lost the moment the
+conversation ends, and the next revision drifts back toward fidelity.
+
 ### 1. Read the black point
 
 Look at the darkest area. Is it true black, or lifted grey-blue?
@@ -38,7 +68,23 @@ The most informative step. Check three places separately:
 
 ### 4. Read saturation per hue band
 
-Not overall saturation — per band. Compare against how the colors would look untouched:
+**Establish which bands the reference actually contains before you touch any of
+them.** This is the step most often skipped, and skipping it is how a preset
+ends up spending its strongest moves on colours the reference does not have.
+A golden-hour reference is typically 90%+ Orange with a little Yellow and no
+Green or Blue at all; draining Green −40 there does nothing to the reference
+and strips green out of the *user's* photo instead, which reads as an orange or
+red cast. `scripts/look-match.py` measures this from the reference file.
+
+Two rules follow:
+
+- **Do not push a band the reference does not contain.** If Green is under 5%
+  of the reference's colour, Green is not part of the look.
+- **Do not leave the dominant band untouched.** If Orange is 90% of the
+  reference, the look lives in Orange. A preset that never adjusts Orange has
+  not replicated anything.
+
+Then, per band, compare against how the colors would look untouched:
 
 - **Skin** (Orange) — richer or drained?
 - **Foliage** (Green/Yellow) — vivid, or muted and yellow-shifted?

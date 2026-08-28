@@ -16,7 +16,14 @@ Positive values are written with an explicit `+`. Value `0` is written bare.
 
 ## Working template
 
-Adobe Color profile, portable, ready to fill in. This is a complete valid file.
+A **skeleton**, not a look. Every slider below is either structural or a
+Lightroom default. Add only the attributes your look actually moves, and
+delete the rest — an attribute you leave in overwrites the user's setting
+with this file's value, which is how a preset ends up applying a grade
+nobody asked for.
+
+**The template must never ship with example slider values.** If you want to
+see a filled-in look, read the worked example after the attribute map.
 
 ```xml
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0-c000 1.000000, 0000/00/00-00:00:00        ">
@@ -40,82 +47,6 @@ Adobe Color profile, portable, ready to fill in. This is a complete valid file.
    crs:ContactInfo=""
    crs:Version="15.3"
    crs:ProcessVersion="11.0"
-   crs:Contrast2012="+12"
-   crs:Highlights2012="-25"
-   crs:Shadows2012="+18"
-   crs:Whites2012="+15"
-   crs:Blacks2012="-10"
-   crs:Texture="+10"
-   crs:Clarity2012="+5"
-   crs:Dehaze="0"
-   crs:Vibrance="+12"
-   crs:Saturation="0"
-   crs:HueAdjustmentRed="0"
-   crs:HueAdjustmentOrange="0"
-   crs:HueAdjustmentYellow="0"
-   crs:HueAdjustmentGreen="+15"
-   crs:HueAdjustmentAqua="0"
-   crs:HueAdjustmentBlue="0"
-   crs:HueAdjustmentPurple="0"
-   crs:HueAdjustmentMagenta="0"
-   crs:SaturationAdjustmentRed="0"
-   crs:SaturationAdjustmentOrange="-6"
-   crs:SaturationAdjustmentYellow="0"
-   crs:SaturationAdjustmentGreen="-12"
-   crs:SaturationAdjustmentAqua="0"
-   crs:SaturationAdjustmentBlue="0"
-   crs:SaturationAdjustmentPurple="0"
-   crs:SaturationAdjustmentMagenta="0"
-   crs:LuminanceAdjustmentRed="0"
-   crs:LuminanceAdjustmentOrange="+8"
-   crs:LuminanceAdjustmentYellow="0"
-   crs:LuminanceAdjustmentGreen="0"
-   crs:LuminanceAdjustmentAqua="0"
-   crs:LuminanceAdjustmentBlue="-10"
-   crs:LuminanceAdjustmentPurple="0"
-   crs:LuminanceAdjustmentMagenta="0"
-   crs:SplitToningShadowHue="30"
-   crs:SplitToningShadowSaturation="6"
-   crs:SplitToningHighlightHue="45"
-   crs:SplitToningHighlightSaturation="10"
-   crs:SplitToningBalance="0"
-   crs:ColorGradeMidtoneHue="0"
-   crs:ColorGradeMidtoneSat="0"
-   crs:ColorGradeShadowLum="0"
-   crs:ColorGradeMidtoneLum="0"
-   crs:ColorGradeHighlightLum="0"
-   crs:ColorGradeGlobalHue="0"
-   crs:ColorGradeGlobalSat="0"
-   crs:ColorGradeGlobalLum="0"
-   crs:ColorGradeBlending="50"
-   crs:Sharpness="40"
-   crs:SharpenRadius="+1.0"
-   crs:SharpenDetail="25"
-   crs:SharpenEdgeMasking="0"
-   crs:LuminanceSmoothing="0"
-   crs:LuminanceNoiseReductionDetail="50"
-   crs:LuminanceNoiseReductionContrast="0"
-   crs:ColorNoiseReduction="25"
-   crs:ColorNoiseReductionDetail="50"
-   crs:ColorNoiseReductionSmoothness="50"
-   crs:LensProfileEnable="1"
-   crs:LensProfileSetup="LensDefaults"
-   crs:AutoLateralCA="1"
-   crs:DefringePurpleAmount="0"
-   crs:DefringePurpleHueLo="30"
-   crs:DefringePurpleHueHi="70"
-   crs:DefringeGreenAmount="0"
-   crs:DefringeGreenHueLo="40"
-   crs:DefringeGreenHueHi="60"
-   crs:PostCropVignetteAmount="-12"
-   crs:PostCropVignetteMidpoint="40"
-   crs:PostCropVignetteRoundness="0"
-   crs:PostCropVignetteFeather="70"
-   crs:PostCropVignetteHighlightContrast="0"
-   crs:PostCropVignetteStyle="1"
-   crs:GrainAmount="14"
-   crs:GrainSize="24"
-   crs:GrainFrequency="50"
    crs:ToneCurveName2012="Custom"
    crs:HasSettings="True">
    <crs:Name>
@@ -143,33 +74,6 @@ Adobe Color profile, portable, ready to fill in. This is a complete valid file.
      <rdf:li xml:lang="x-default"/>
     </rdf:Alt>
    </crs:Description>
-   <crs:ToneCurvePV2012>
-    <rdf:Seq>
-     <rdf:li>0, 0</rdf:li>
-     <rdf:li>64, 60</rdf:li>
-     <rdf:li>128, 128</rdf:li>
-     <rdf:li>192, 196</rdf:li>
-     <rdf:li>255, 250</rdf:li>
-    </rdf:Seq>
-   </crs:ToneCurvePV2012>
-   <crs:ToneCurvePV2012Red>
-    <rdf:Seq>
-     <rdf:li>0, 0</rdf:li>
-     <rdf:li>255, 255</rdf:li>
-    </rdf:Seq>
-   </crs:ToneCurvePV2012Red>
-   <crs:ToneCurvePV2012Green>
-    <rdf:Seq>
-     <rdf:li>0, 0</rdf:li>
-     <rdf:li>255, 255</rdf:li>
-    </rdf:Seq>
-   </crs:ToneCurvePV2012Green>
-   <crs:ToneCurvePV2012Blue>
-    <rdf:Seq>
-     <rdf:li>0, 10</rdf:li>
-     <rdf:li>255, 246</rdf:li>
-    </rdf:Seq>
-   </crs:ToneCurvePV2012Blue>
    <crs:Look>
     <rdf:Description
      crs:Name="Adobe Color"
@@ -192,16 +96,42 @@ Adobe Color profile, portable, ready to fill in. This is a complete valid file.
 </x:xmpmeta>
 ```
 
-Generate `crs:UUID` fresh per preset — 32 uppercase hex characters. Reusing one makes Lightroom treat two presets as the same preset.
+The gap between `crs:ProcessVersion` and `crs:ToneCurveName2012` is where the
+look goes. Nothing else belongs there. Drop `crs:ToneCurveName2012` too if the
+preset carries no tone curve.
 
-`crs:Version` records which Lightroom version authored the preset. It is cosmetic, not a compatibility gate — an older value imports fine, so leave it or omit it rather than chasing the current release. `crs:ProcessVersion="11.0"` is the meaningful one and is current.
+## The tone curve rule
+
+**If the file contains any `ToneCurvePV2012*` element, it must also carry
+`crs:ToneCurveName2012="Custom"`.**
+
+Without it Lightroom imports the preset with no error, reports success, and
+**silently discards every curve** — the composite curve and all three channel
+curves. Nothing in the UI indicates this happened.
+
+This matters more than it sounds. The Blue channel curve is where warm
+highlights live: pulling its top point down to `255,246` is what makes
+highlights read yellow rather than orange. Drop it and a warm look loses its
+yellow, leaving the Color Grading split-tone as the only warmth source — which
+lands orange, or red once any magenta Tint is present. "I asked for golden and
+got orange" is this bug.
+
+Generate `crs:UUID` fresh per preset — 32 uppercase hex characters. Reusing one
+makes Lightroom treat two presets as the same preset.
+
+`crs:Version` records which Lightroom version authored the preset. It is
+cosmetic, not a compatibility gate — an older value imports fine, so leave it or
+omit it rather than chasing the current release. `crs:ProcessVersion="11.0"` is
+the meaningful one and is current.
 
 ## Attribute map
 
 | Control | Attribute | Notes |
 |---|---|---|
 | Exposure | `Exposure2012` | **Omit for portability** |
-| Temp / Tint | `Temperature` / `Tint` | **Omit for portability** |
+| Temp / Tint (absolute) | `Temperature` / `Tint` | **Omit for portability.** Absolute Kelvin; wrecks every photo but the one it was built on |
+| Temp / Tint (relative) | `IncrementalTemperature` / `IncrementalTint` | The portable pair — a *shift*, not a value. Still per-photo in character; use only when the look genuinely needs a nudge, and keep it small |
+| HDR edit mode | `HDREditMode` | `0` = SDR, `1` = HDR. Relevant to ProRAW in current Lightroom; omit to leave the user's mode alone |
 | Contrast | `Contrast2012` | |
 | Highlights | `Highlights2012` | |
 | Shadows | `Shadows2012` | |
@@ -238,6 +168,69 @@ Three traps in this table, all verified against real preset files:
 - **Color Grading is split across two prefixes.** Shadows and Highlights keep the legacy `SplitToning*` names for Hue and Saturation; only Midtones and Global use `ColorGrade*`. Luminance uses `ColorGrade*Lum` for all four. `ColorGradeShadowHue` and `ColorGradeHighlightHue` do not exist — writing them produces a preset that silently drops the grade.
 - **`GrainFrequency` is the Roughness slider.**
 - **`SplitToningBalance` is the Color Grading Balance slider.**
+
+## Which way is positive
+
+A sign error here is invisible in the file and obvious in the photo. Never
+write one of these from memory.
+
+| Attribute | Negative | Positive |
+|---|---|---|
+| `IncrementalTemperature` | cooler / blue | warmer / yellow |
+| `IncrementalTint` | toward green | **toward magenta** |
+| `HueAdjustmentRed` | toward magenta | toward orange |
+| `HueAdjustmentOrange` | toward red | toward yellow |
+| `HueAdjustmentYellow` | **toward orange** | toward green |
+| `HueAdjustmentGreen` | toward yellow | toward aqua |
+| `HueAdjustmentAqua` | toward green | toward blue |
+| `HueAdjustmentBlue` | toward aqua | toward purple |
+| `HueAdjustmentPurple` | toward blue | toward magenta |
+| `HueAdjustmentMagenta` | toward purple | toward red |
+| `SplitToningBalance` | favours the **shadow** hue | favours the **highlight** hue |
+| `PostCropVignetteAmount` | darkens corners | lightens corners |
+| `PostCropVignetteRoundness` | more rectangular | more circular |
+
+Colour Grading hue values are absolute degrees on the wheel, not offsets:
+`0` red, `30` orange, `45` amber, `60` yellow, `120` green, `240` blue, `300` magenta.
+
+**The yellow row is the one that bites.** A warm look built by dragging
+`HueAdjustmentYellow` negative does not get more golden — it rotates the
+image's yellows into orange, and then into red once a positive
+`IncrementalTint` is added on top. Golden-hour references sit around
+**35–48°**; keep the image's own yellows there rather than pulling them down.
+
+## Worked example — a warm golden look
+
+Filled in from the skeleton. Note that every move targets the bands the
+reference actually contains, and the Blue curve carries the yellow.
+
+```xml
+   crs:Contrast2012="+8"
+   crs:Highlights2012="-20"
+   crs:Shadows2012="+15"
+   crs:Blacks2012="+10"
+   crs:HueAdjustmentOrange="+4"
+   crs:SaturationAdjustmentOrange="+10"
+   crs:LuminanceAdjustmentOrange="+6"
+   crs:SaturationAdjustmentYellow="+8"
+   crs:SplitToningHighlightHue="45"
+   crs:SplitToningHighlightSaturation="10"
+   crs:SplitToningShadowHue="220"
+   crs:SplitToningShadowSaturation="5"
+   crs:ColorGradeBlending="50"
+   crs:ToneCurveName2012="Custom"
+```
+```xml
+   <crs:ToneCurvePV2012>
+    <rdf:Seq><rdf:li>0, 12</rdf:li><rdf:li>128, 128</rdf:li><rdf:li>255, 248</rdf:li></rdf:Seq>
+   </crs:ToneCurvePV2012>
+   <crs:ToneCurvePV2012Blue>
+    <rdf:Seq><rdf:li>0, 8</rdf:li><rdf:li>255, 244</rdf:li></rdf:Seq>
+   </crs:ToneCurvePV2012Blue>
+```
+
+The Blue curve's top pulled to `255,244` is what makes the highlights read
+yellow. Delete that one line and the same preset lands orange.
 
 ## Other profiles
 
@@ -291,3 +284,22 @@ Name the file exactly as `crs:Name`. Set `crs:Group` to something meaningful so 
 | Custom curve ignored | Set `ToneCurveName2012="Custom"`. |
 | Every attribute written with a 0 default | Only write what the look uses; zeros overwrite the user's settings. |
 | Pasting XML into chat | Write a file and send it. |
+| Custom curve with no `ToneCurveName2012` | Set it to `"Custom"`. Otherwise every curve is silently discarded. |
+| Draining a band the reference does not contain | Read the reference's actual hue content first. `Green Sat −40` on a reference with no green only strips green from the *user's* photo. |
+| Warm look built with `HueAdjustmentYellow` negative | That rotates yellow toward orange. Build warmth on Orange sat/lum and the Blue curve. |
+| Shipping without running the checks | Run `scripts/preset-check.py` and `scripts/look-match.py` before handing the file over. |
+
+## Before you ship it
+
+Two checks live in the repo. Run both; neither needs Lightroom.
+
+```
+scripts/preset-check.py PRESET.xmp              # structure, vocabulary, ranges, curve mode
+scripts/look-match.py REFERENCE.jpg PRESET.xmp  # does it grade the bands the reference has?
+```
+
+`preset-check.py` catches the silent-failure class — unknown attribute names,
+out-of-range values, non-monotonic curves, reused UUIDs, and a custom curve
+with no `ToneCurveName2012`. `look-match.py` catches the look-is-wrong class:
+hard moves on bands the reference does not contain, and a dominant reference
+band the preset never touches.

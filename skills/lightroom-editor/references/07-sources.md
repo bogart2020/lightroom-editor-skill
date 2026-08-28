@@ -56,7 +56,7 @@ How much latitude remains for recovery. It decides how hard you are allowed to p
 **Editing implications:**
 - **Fix the green on Tint, not Temp.** Green lives on the green↔magenta axis. Set the amount by eye against a known neutral; corrections are typically small, but read the image rather than typing a number. Reaching for Temp produces a warm *and* green image, which is worse.
 - If green persists only in the shadows after Tint is correct, pull the **Green channel curve's lower third down slightly** (`01-light.md`). That is a zonal cast, and white balance cannot fix a zonal cast.
-- **Do not fix it with Color Mix `Green Sat −25`.** That desaturates real greens — foliage, grass — and leaves the skin cast in place.
+- **Do not fix it with Color Mix `Green Sat −25`.** That desaturates real greens — foliage, grass — and leaves the skin cast in place. This is about *correction only*: as a deliberate creative move, a drained green is a legitimate look and negative Green Sat is the right control for it. The error is reaching for it to remove a cast. Say which of the two you are doing whenever you write a negative Green Sat, and never write one on a reference image that contains no green.
 - **Camera Matching is worth auditioning but is not a fix.** The Sony Camera Standard/Portrait profiles are themselves reported to carry the green. Offer it as an alternative rendering to try, not as a correction.
 
 ---

@@ -16,7 +16,12 @@ Photo editing in Adobe Lightroom mobile, driven by two ideas in fixed order:
 
 Adobe Lightroom mobile (iOS/Android), **Adobe Color** profile as the default starting point. Everything is expressed as slider values the user types by hand, and optionally as an `.xmp` preset.
 
-You cannot see a RAW file. `.ARW`, `.CR3`, `.NEF`, `.RAF`, `.DNG` do not render in this conversation. If the user attaches one, say so plainly and ask for a JPEG export or a screenshot of the photo — then continue; a described photo is still workable.
+**Whether you can see a RAW file depends on where you are running.**
+
+- **Chat only** (no shell, no filesystem): `.ARW`, `.CR3`, `.NEF`, `.RAF`, `.DNG` do not render. Say so plainly and ask for a JPEG export or a screenshot — then continue; a described photo is still workable.
+- **With a code environment**: decode it. `rawpy`/`libraw` reads the sensor data, `exiftool` reads the metadata, and DNGs carry an embedded JPEG preview you can extract and look at directly. Measure rather than assume — black point, clipping, and neutral balance are all readable, and a measured file beats a described one.
+
+Check which case you are in before declining.
 
 ## Step 1 — Intake
 
@@ -30,8 +35,16 @@ Interview before prescribing. Ask these, and do not guess an answer you could ha
 | **Subject** — portrait, landscape, street, food, product, night | Sets what is protected and what is expendable |
 | **Destination** — print, web, phone screen, client delivery | Sets sharpening, noise, and how far color can go |
 | **Reuse** — one photo, or a whole set | Decides whether to produce an `.xmp` |
+| **Fidelity** — *when a reference image is attached:* match it, or use it as a starting point? And if a starting point, in which direction — warmer, cooler, more contrast, more muted? | A reference is not automatically the target. Ask before assuming it is. See `references/08-looks.md` |
 
 Ask them one at a time when the user is conversational; ask them as one block when they clearly want speed. Missing answers are fine if the user declines — state the assumption you are making in its place.
+
+**Fidelity is the one that cannot be inferred.** A reference image tells you what
+*it* looks like, never how close the user wants to land. "Warm and golden" is a
+different target from an album cover that measures orange, and a recipe faithful
+to the reference is then wrong on purpose. Ask, put a number on the answer
+("about 8° warmer"), and record it with the preset — it is not recoverable from
+the files afterwards.
 
 ## Step 2 — Verdict
 
@@ -100,4 +113,7 @@ Each of these means stop and correct course:
 - Pushing Shadows past +30 on Apple ProRAW or Pixel DNG → the phone already lifted them, and re-lifting is the usual cause of the flat HDR look. +30 is this skill's house limit; the real ceiling is wherever shadow noise appears at 100%.
 - Recommending Clarity above +15 or Dehaze above +10 → these are house limits, not hard rules. If the image truly needs more, say why.
 - Judging sharpening or noise at fit-to-screen → both are 100%-zoom decisions.
-- Offering a preset that carries Exposure, Temp, or Tint → those are per-photo. A portable preset omits them.
+- Offering a preset that carries Exposure, Temp, or Tint → those are per-photo. A portable preset omits them. `IncrementalTemperature`/`IncrementalTint` are the portable pair, but `IncrementalTint` positive is *toward magenta* — check the sign in `references/09-presets-xmp.md`.
+- Writing a tone curve without `ToneCurveName2012="Custom"` → Lightroom discards every curve silently, including the Blue curve that carries warm highlights. This is the most common cause of "I asked for golden and got orange".
+- Adjusting a hue band the reference image does not contain → read the reference's band content first (`references/08-looks.md`).
+- Handing over a preset without running `scripts/preset-check.py` and `scripts/look-match.py` → both catch failures that are invisible until the user applies the preset.
