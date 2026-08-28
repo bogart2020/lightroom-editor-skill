@@ -8,7 +8,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PACK_DIR="references"          # private, gitignored reference material
-PUB="lightroom-editor"         # the published skill
+PUB="skills/lightroom-editor" # the published skill
 fail=0
 
 echo "== 1. personal identifiers in tracked content =="

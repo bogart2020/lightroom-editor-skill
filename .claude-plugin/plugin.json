@@ -1,0 +1,26 @@
+{
+  "name": "lightroom-editor",
+  "version": "1.1.0",
+  "description": "Adobe Lightroom mobile editing partner. Diagnoses the source (Apple ProRAW, Sony ARW, Canon CR3, Fujifilm RAF, Nikon NEF, Pixel DNG, HEIC/JPEG) and its known bias, then prescribes exact slider values in pipeline order across Light, Color, Effects, Detail, Optics and Masking. Replicates looks from a reference image, critiques an existing edit, and writes importable .xmp presets. Adobe Color profile throughout.",
+  "author": {
+    "name": "bogart2020",
+    "url": "https://github.com/bogart2020"
+  },
+  "homepage": "https://github.com/bogart2020/lightroom-editor-skill",
+  "repository": "https://github.com/bogart2020/lightroom-editor-skill",
+  "license": "MIT",
+  "keywords": [
+    "lightroom",
+    "photography",
+    "photo-editing",
+    "raw",
+    "proraw",
+    "presets",
+    "xmp",
+    "color-grading",
+    "masking"
+  ],
+  "skills": [
+    "./skills/lightroom-editor"
+  ]
+}

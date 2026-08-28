@@ -1,0 +1,24 @@
+{
+  "name": "lightroom-editor-skill",
+  "owner": {
+    "name": "bogart2020",
+    "url": "https://github.com/bogart2020"
+  },
+  "description": "Adobe Lightroom mobile editing skill for Claude — source-aware correction, look replication, and XMP preset authoring.",
+  "plugins": [
+    {
+      "name": "lightroom-editor",
+      "source": "./",
+      "description": "Source-aware Adobe Lightroom mobile editing: diagnoses the camera system's bias, prescribes exact slider values in pipeline order, replicates looks from a reference image, and writes importable .xmp presets.",
+      "category": "creative",
+      "keywords": [
+        "lightroom",
+        "photography",
+        "photo-editing",
+        "raw",
+        "presets",
+        "color-grading"
+      ]
+    }
+  ]
+}

@@ -37,20 +37,26 @@ Deep profiles for **Apple ProRAW**, **Sony ARW**, **Canon CR2/CR3**, **Nikon NEF
 
 ## Install
 
-### Claude Desktop
+### As a plugin (recommended — Claude Code and Claude Desktop)
 
-1. Download this repo, or `git clone https://github.com/bogart2020/lightroom-editor-skill.git`
-2. Zip the **`lightroom-editor/`** folder (the folder containing `SKILL.md`).
-3. Claude Desktop → **Settings → Capabilities → Skills → Upload skill**.
-4. Select the zip.
+```
+/plugin marketplace add bogart2020/lightroom-editor-skill
+/plugin install lightroom-editor@lightroom-editor-skill
+```
 
-A prebuilt `lightroom-editor.zip` is attached to the [latest release](https://github.com/bogart2020/lightroom-editor-skill/releases).
+The skill then loads automatically whenever you talk about editing a photo.
 
-### Claude Code
+### As a standalone skill (Claude Desktop upload)
+
+1. Download `lightroom-editor.zip` from the [latest release](https://github.com/bogart2020/lightroom-editor-skill/releases).
+2. Claude Desktop → **Settings → Capabilities → Skills → Upload skill**.
+3. Select the zip.
+
+### Manually (Claude Code)
 
 ```bash
 git clone https://github.com/bogart2020/lightroom-editor-skill.git
-cp -r lightroom-editor-skill/lightroom-editor ~/.claude/skills/
+cp -r lightroom-editor-skill/skills/lightroom-editor ~/.claude/skills/
 ```
 
 ## Using it
@@ -70,27 +76,35 @@ Just describe what you're working on. The skill fires on its own.
 ## Structure
 
 ```
-lightroom-editor/
-├─ SKILL.md              orchestrator — intake, pipeline order, routing
+.claude-plugin/
+├─ marketplace.json        makes this repo installable via /plugin marketplace add
+└─ plugin.json             plugin manifest
+skills/lightroom-editor/
+├─ SKILL.md                orchestrator — intake, pipeline order, routing
 └─ references/
-   ├─ 00-pipeline.md     order of operations, histogram, what to fix first
-   ├─ 01-light.md        tone sliders, tone curve, RGB channel curves
-   ├─ 02-color.md        white balance, HSL, color grading, profiles
-   ├─ 03-effects.md      texture, clarity, dehaze, vignette, grain
-   ├─ 04-detail.md       sharpening, luminance noise, color noise
-   ├─ 05-optics.md       lens corrections, CA, defringe, geometry
-   ├─ 06-masking.md      mask types, combination, standard recipes
-   ├─ 07-sources.md      per-camera profiles + universal diagnosis method
-   ├─ 08-looks.md        reverse-engineering, film emulation, modern looks, genres
-   ├─ 09-presets-xmp.md  XMP template, attribute map, mobile import
-   └─ 10-diagnostics.md  failure signatures, critique method, check-yourself lists
+   ├─ 00-pipeline.md       working order, histogram, what to fix first
+   ├─ 01-light.md          tone sliders, tone curve, RGB channel curves
+   ├─ 02-color.md          white balance, HSL, color grading, profiles
+   ├─ 03-effects.md        texture, clarity, dehaze, vignette, grain
+   ├─ 04-detail.md         sharpening, luminance noise, color noise
+   ├─ 05-optics.md         lens corrections, CA, defringe, geometry
+   ├─ 06-masking.md        mask types, combination, standard recipes
+   ├─ 07-sources.md        per-camera profiles + universal diagnosis method
+   ├─ 08-looks.md          reverse-engineering, film looks, modern looks, genres
+   ├─ 09-presets-xmp.md    XMP template, attribute map, mobile import
+   └─ 10-diagnostics.md    failure signatures, critique method, check-yourself lists
+scripts/leak-check.sh      CI-able check that no private material is tracked
 ```
 
 The SKILL.md is an orchestrator: it routes to a reference file only when that file's branch fires, so a simple question doesn't load all eleven.
 
 ## Notes
 
-Slider ranges and defaults were checked against Adobe documentation, and the XMP attribute names were verified against real Lightroom preset files rather than taken from memory — including the trap that Color Grading stores Shadows and Highlights under legacy `SplitToning*` names while Midtones and Global use `ColorGrade*`.
+Slider ranges, defaults, and per-camera claims were fact-checked line by line by four independent review agents against Adobe's documentation. That pass corrected several errors, including an inverted Color Grading **Balance** direction, an invented internal processing order, and a backwards claim about Apple ProRAW highlight headroom. XMP attribute names were verified against real preset files — including the trap that Color Grading stores Shadows and Highlights under legacy `SplitToning*` names while Midtones and Global use `ColorGrade*`.
+
+Numbers that are this skill's own conservative defaults rather than Adobe figures are marked as **house limits**, so you can tell which is which.
+
+Film and simulation recipes are original approximations, not derived from any commercial preset pack. Stock names are used descriptively; all marks belong to their owners.
 
 Not affiliated with or endorsed by Adobe. Lightroom is a trademark of Adobe Inc.
 
