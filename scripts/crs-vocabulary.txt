@@ -1,11 +1,12 @@
-# Real Camera Raw crs: attribute names.
-# Anything not on this list is dropped silently by Lightroom on import,
-# which is the usual cause of 'the preset imported but did nothing'.
 #
-# Sources, in order of authority:
 #  1. attribute names observed in Lightroom-exported .xmp preset files
 #  2. names documented in skills/lightroom-editor/references/09-presets-xmp.md
+# Anything not on this list is dropped silently by Lightroom on import,
+# Real Camera Raw crs: attribute names.
 # Regenerate group 1 with:
+# Sources, in order of authority:
+# which is the usual cause of 'the preset imported but did nothing'.
+
 Amount
 AutoLateralCA
 Blacks2012
@@ -192,4 +193,5 @@ Version
 Vibrance
 VignetteAmount
 What
+WhiteBalance
 Whites2012
