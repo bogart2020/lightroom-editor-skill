@@ -11,3 +11,5 @@
 
 # local leak-check denylist (personal identifiers)
 .leak-denylist
+__pycache__/
+*.pyc

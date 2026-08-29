@@ -11,7 +11,7 @@ suite proves the fix rather than describing it.
                                     with main), proving they go red there
     tests/test_skill.py --pre-fix REF   use an explicit ref
 """
-import os, re, subprocess, sys, tempfile, xml.etree.ElementTree as ET
+import importlib.util, os, re, subprocess, sys, tempfile, xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -140,6 +140,97 @@ def layer1_document(pre_fix=False):
     check("RAW-visibility rule is conditional on environment",
           "code environment" in skl and "rawpy" in skl,
           "SKILL.md still claims RAW can never be read")
+
+    # BUG: Step 1 "interviewed" so softly that it never ran. The skill went
+    # straight to numbers on assumptions it never stated, because any
+    # hesitation counted as a decline and the escape hatch was unconditional.
+    step1 = skl.split("## Step 2")[0]
+    check("intake states that no number leaves Step 1 until the gate opens",
+          re.search(r"[Nn]o slider number leaves this step", step1),
+          "Step 1 does not block Step 2; intake is advisory again")
+    check("the fail-open decline clause is gone",
+          "Missing answers are fine if the user declines" not in skl,
+          "the clause that let any hesitation skip intake is still present")
+    check("the adaptive one-at-a-time/block clause is gone",
+          "when they clearly want speed" not in skl,
+          "intake still leaves the asking mode to a judgement call")
+    check("the gate opens only on a literal token",
+          "`skip intake`" in step1,
+          "Step 1 names no explicit override phrase, so the hatch is model-judged")
+    check("silence and impatience are named as not opening the gate",
+          re.search(r"silence.*vague.*impatien|impatien.*silence", step1, re.S | re.I),
+          "Step 1 does not say what fails to open the gate")
+
+    # BUG: a fact the agent could measure was being asked of the user, and a
+    # decision the user owned was being assumed. The gate splits them.
+    check("gate separates measured facts from user decisions",
+          "Measurement" in step1 and "The user only" in step1,
+          "Step 1 does not say which gates may be settled by measurement")
+    check("Fidelity gates only when a reference is attached",
+          re.search(r"only when a reference image is attached", step1),
+          "Fidelity is not stated as a conditional gate")
+
+    # BUG: a vague look word was accepted as an Intent and silently guessed at.
+    check("vague look words must be decomposed and ratified",
+          "ratified" in step1 and "Silence is not ratification" in step1,
+          "Step 1 still lets a vague word stand as an Intent")
+    check("Intent-vs-source conflicts stop for the user to resolve",
+          "conflict, not a\nbrief" in step1 or "conflict, not a brief" in step1,
+          "Step 1 does not treat an incoherent Intent as a blocking conflict")
+
+    # BUG: the gate existed only in Step 1, so nothing downstream enforced it.
+    check("a red flag catches a number emitted with a gate unanswered",
+          re.search(r"gate still unanswered", skl),
+          "Red flags do not cover emitting a number before the gate opens")
+    check("a red flag catches a vague word accepted as an Intent",
+          re.search(r"vague look word as an Intent", skl),
+          "Red flags do not cover accepting a vague look word")
+    check("the Verdict opens with a receipt of what the gate settled",
+          "receipt" in skl and "(measured)" in skl,
+          "Step 2 does not surface the settled gate in the answer itself")
+
+    # BUG: presets shipped unverified, and 'accuracy' was never measured at all.
+    check("a Verify step exists and gates delivery",
+          "## Step 5 — Verify" in skl,
+          "there is no verification stage between Look and Deliver")
+    check("the verify gate is stated in dE, not in a percentage",
+          re.search(r"mean ΔE00 ≤ 1\.0", skl),
+          "no measurable stopping threshold is stated for the loop")
+    check("the tunable slider set is restricted to the modellable ones",
+          re.search(r"Temperature, Tint, Exposure, the tone-curve\s*\n?\s*points", skl),
+          "Step 5 does not restrict what the optimiser may move")
+    check("unmodelled sliders are named as held, not tuned",
+          "is reported as unmodelled" in skl,
+          "Step 5 does not say which sliders it cannot represent")
+    check("coverage is required alongside the score",
+          "Coverage is part of the result" in skl,
+          "a score could be reported without saying how much it covered")
+    check("the score is not allowed to claim Lightroom fidelity",
+          'Never say "matches Lightroom"' in skl,
+          "Step 5 does not bound what the score may be claimed to mean")
+    check("chat-only degrades loudly instead of implying a score",
+          "Never imply a score you did not measure" in skl,
+          "the no-shell case does not state its own limits")
+    check("Deliver is Step 6 and carries five parts",
+          "## Step 6 — Deliver" in skl and "these five parts" in skl and
+          "all five parts are present" in skl,
+          "Deliver was not renumbered, or still promises four parts")
+    check("the recipe shows what tuning earned",
+          re.search(r"seed −8, −0\.4 ΔE", skl),
+          "Deliver does not require the seed->tuned delta to be shown")
+    check("intake reference is routed",
+          re.search(r"\|\s*A vague look word to decompose.*\|\s*`references/11-intake\.md`\s*\|", skl),
+          "SKILL.md routing table has no row for references/11-intake.md")
+
+    if not pre_fix:
+        intake = read("skills/lightroom-editor/references/11-intake.md")
+        check("11-intake.md carries the decomposition ladders",
+              "Moody" in intake and "Cinematic" in intake and "Vintage" in intake,
+              "the vague-word ladders are missing")
+        check("11-intake.md carries the conflict archetypes",
+              "Conflict archetypes" in intake and "8-bit JPEG" in intake and
+              "ProRAW" in intake,
+              "the Intent-vs-source conflict costs are missing")
 
     # every XML example in the doc must actually parse
     for i, blk in enumerate(xml_blocks(xmp)):
@@ -380,6 +471,145 @@ def layer4_look():
               rc == 1 and "does not touch it" in out, out.strip()[-300:])
 
 
+# ---------------------------------------------------------------- layer 5
+def _load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def synth_linear(np):
+    """A synthetic linear image: luminance ramp with chroma. No file needed."""
+    y, x = np.mgrid[0:48, 0:48]
+    lum = (0.02 + 0.96 * (y / 47.0)) ** 2.2
+    r = lum * (0.85 + 0.30 * (x / 47.0))
+    g = lum * 0.80
+    b = lum * (1.15 - 0.30 * (x / 47.0))
+    return np.clip(np.stack([r, g, b], axis=-1), 0.0, 1.0)
+
+
+def layer5_render():
+    """Properties the renderer and the tuner must hold regardless of whether
+    they agree with Adobe. Adobe fidelity is explicitly NOT claimed (the
+    develop math is unpublished), so these are what can honestly be pinned."""
+    print("\nLAYER 5 — renderer and tuner invariants")
+    try:
+        import numpy as np
+    except ImportError:
+        skip("renderer and tuner invariants (12 checks)",
+             "numpy not installed — pip install -r tests/requirements.txt")
+        return
+    crs = _load("crs_render", ROOT / "scripts" / "crs-render.py")
+    tune = _load("tune", ROOT / "scripts" / "tune.py")
+    img = synth_linear(np)
+
+    # deterministic: a score you cannot reproduce is not a measurement.
+    a = crs.render(img, {"Exposure2012": 0.3, "Blacks2012": 10.0})
+    b = crs.render(img, {"Exposure2012": 0.3, "Blacks2012": 10.0})
+    check("rendering is deterministic", bool(np.array_equal(a, b)),
+          "two identical renders differed")
+
+    # monotonic in the expected direction, per slider.
+    base = crs.render(img, {})
+    for name, val, probe, direction in [
+            ("Exposure2012", 0.5, lambda o: o.mean(), "raises"),
+            ("Blacks2012", 40.0, lambda o: o.mean(), "raises"),
+            ("Whites2012", 40.0, lambda o: o.mean(), "raises"),
+            ("IncrementalTemperature", 50.0, lambda o: o[..., 0].mean(), "raises"),
+            ("IncrementalTint", 50.0, lambda o: o[..., 1].mean(), "lowers")]:
+        out = crs.render(img, {name: val})
+        moved = probe(out) - probe(base)
+        ok = moved > 1e-6 if direction == "raises" else moved < -1e-6
+        check(f"{name} {direction} its measure monotonically", ok,
+              f"moved by {moved:+.6f}, expected to {direction[:-1]}")
+
+    # an image scored against itself is a perfect match, or the metric is broken.
+    enc = crs.render(img, {})
+    mean_de, worst = tune.score_against_reference(enc, tune.zone_means(enc))
+    check("an image scored against itself returns zero dE",
+          mean_de < 1e-6 and worst < 1e-6, f"mean {mean_de:.6f}, worst {worst:.6f}")
+
+    # dE2000 against a known-different colour must be non-trivial and symmetric.
+    d1 = tune.delta_e_2000((50.0, 2.6, -79.7), (50.0, 0.0, -82.7))
+    d2 = tune.delta_e_2000((50.0, 0.0, -82.7), (50.0, 2.6, -79.7))
+    check("dE2000 is symmetric and non-degenerate",
+          abs(d1 - d2) < 1e-9 and 0.5 < d1 < 10.0, f"{d1:.4f} vs {d2:.4f}")
+
+    # the optimiser may never leave its bounds, even chasing an unbounded score.
+    greedy = lambda o: (-float(o.mean()), 0.0)     # rewards infinite brightness
+    p, m, w, iters, why = tune.tune(img, {}, greedy)
+    out_of_bounds = [k for k, v in p.items()
+                     if not (tune.PARAMS[k][0] - 1e-9 <= v <= tune.PARAMS[k][1] + 1e-9)]
+    check("the optimiser never leaves its bounds", not out_of_bounds,
+          f"out of bounds: {out_of_bounds}")
+    check("the optimiser terminates within the cap",
+          iters <= tune.MAX_ITERS, f"ran {iters} iterations")
+    check("termination reports why it stopped",
+          why in ("plateaued", "reached the gate", "hit the iteration cap"), why)
+
+    # tuning must never return a worse result than the seed it started from.
+    target = crs.render(img, {"Exposure2012": 0.25, "IncrementalTemperature": 15.0})
+    zones = tune.zone_means(target)
+    obj = lambda o: tune.score_against_reference(o, zones)
+    seed_mean, _ = obj(crs.render(img, {}))
+    p2, tuned_mean, _, _, _ = tune.tune(img, {}, obj)
+    check("the best score never worsens against the seed",
+          tuned_mean <= seed_mean + 1e-9,
+          f"seed {seed_mean:.4f} -> tuned {tuned_mean:.4f}")
+    check("tuning measurably closes a known gap",
+          tuned_mean < seed_mean, f"no improvement: {seed_mean:.4f} -> {tuned_mean:.4f}")
+
+    # the printed percentage must follow the formula the docs state.
+    check("the percentage follows its stated formula",
+          abs(tune.as_percent(1.0) - 90.0) < 1e-9 and abs(tune.as_percent(0.2) - 98.0) < 1e-9,
+          f"dE 1.0 -> {tune.as_percent(1.0)}, dE 0.2 -> {tune.as_percent(0.2)}")
+
+    # coverage must count what the renderer cannot represent.
+    moved, modelled = crs.moved_sliders(
+        {"Exposure2012": "+0.30", "Clarity2012": "+12", "Dehaze": "+8",
+         "Contrast2012": "0", "UUID": "A" * 32})
+    check("coverage counts unmodelled sliders as unverified",
+          set(moved) == {"Exposure2012", "Clarity2012", "Dehaze"}
+          and modelled == ["Exposure2012"],
+          f"moved={moved} modelled={modelled}")
+
+    # BUG: the tuner wrote its tuned Exposure into the .xmp, so every preset it
+    # produced carried one photo's exposure correction — the portability
+    # failure the skill's own red flag forbids.
+    with tempfile.TemporaryDirectory() as d:
+        seed = Path(d) / "seed.xmp"
+        seed.write_text(PRESET.format(
+            attrs='crs:IncrementalTemperature="+0" crs:IncrementalTint="+0" '
+                  'crs:Exposure2012="+0.00" crs:Blacks2012="+0" '
+                  'crs:Whites2012="+0" crs:Clarity2012="+12"'))
+        out = Path(d) / "tuned.xmp"
+        base, _ = crs.parse_settings(seed)
+        tune.write_tuned(seed, out, base,
+                         {"IncrementalTemperature": 40.0, "IncrementalTint": -10.0,
+                          "Exposure2012": 0.6, "Blacks2012": 8.0, "Whites2012": 12.0})
+        written = out.read_text()
+        check("the tuned preset never carries per-photo settings",
+              all(f"crs:{k}=" not in written for k in tune.PER_PHOTO),
+              f"per-photo settings survived into the preset: {written}")
+        check("the tuned preset carries the tuned portable values",
+              'crs:IncrementalTemperature="+40"' in written
+              and 'crs:Whites2012="+12"' in written,
+              "portable tuned values were not written back")
+        check("the tuned preset preserves unmodelled sliders untouched",
+              'crs:Clarity2012="+12"' in written,
+              "an unmodelled slider was altered or dropped by the tuner")
+
+    # BUG: coverage was read off the seed, so a recipe whose modelled sliders
+    # started at zero reported "0 of N verified" however much the loop tuned.
+    seeded = {"Clarity2012": "+12", "IncrementalTemperature": "0"}
+    seeded.update({"IncrementalTemperature": "60", "Whites2012": "12"})
+    moved2, modelled2 = crs.moved_sliders(seeded)
+    check("coverage credits sliders the tuner moved off zero",
+          set(modelled2) == {"IncrementalTemperature", "Whites2012"},
+          f"modelled={modelled2}; tuned sliders were not counted as verified")
+
+
 def main():
     if "--pre-fix" in sys.argv:
         layer1_document(pre_fix=True)
@@ -388,6 +618,7 @@ def main():
         layer2_mutations()
         layer3_corpora()
         layer4_look()
+        layer5_render()
     passed = sum(1 for _, ok, _ in results if ok)
     total = len(results)
     tail = f"  ({len(skipped)} skipped)" if skipped else ""
