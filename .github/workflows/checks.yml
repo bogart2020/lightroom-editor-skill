@@ -32,7 +32,7 @@ jobs:
           shopt -s nullglob globstar
           files=(**/*.xmp)
           if [ ${#files[@]} -gt 0 ]; then
-            python scripts/preset-check.py "${files[@]}"
+            python skills/lightroom-editor/scripts/preset-check.py "${files[@]}"
           else
             echo "no .xmp files tracked in the repo — nothing to validate"
           fi

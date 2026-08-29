@@ -1,6 +1,6 @@
 {
   "name": "lightroom-editor",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Adobe Lightroom mobile editing partner. Diagnoses the source (Apple ProRAW, Sony ARW, Canon CR3, Fujifilm RAF, Nikon NEF, Pixel DNG, HEIC/JPEG) and its known bias, then prescribes exact slider values in pipeline order across Light, Color, Effects, Detail, Optics and Masking. Replicates looks from a reference image, critiques an existing edit, and writes importable .xmp presets. Adobe Color profile throughout.",
   "author": {
     "name": "bogart2020",

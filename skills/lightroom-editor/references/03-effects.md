@@ -112,7 +112,23 @@ Amount 25   Size 32   Roughness 60
 Amount 40   Size 45   Roughness 70
 ```
 
-**Size is resolution-relative.** Grain at Size 25 on a 12 MP phone file is visually coarser than the same setting on a 60 MP file. On high-resolution files raise Size to keep the same apparent texture.
+**Size is resolution-relative**, and the three recipes above are written for **24 MP**. Grain at Size 25 on a 12 MP phone file is visually coarser than the same setting on a 60 MP file, because Size is a particle size in pixels while apparent texture is judged against the whole frame.
+
+Scale it by the *linear* dimension, not the pixel count — which is the square root of the megapixels:
+
+```
+Size_target = Size_24MP × √(MP_target / 24)
+```
+
+| Target texture | 12 MP | 24 MP | 48 MP | 60 MP |
+|---|---|---|---|---|
+| Subtle film texture | 16 | 22 | 31 | 35 |
+| Visible 35mm | 23 | 32 | 45 | 51 |
+| Heavy, pushed film | 32 | 45 | 64 | 71 |
+
+Common cases: iPhone ProRAW at 12 MP takes roughly **0.7×** the 24 MP number; a 48 MP ProRAW or a 45–50 MP full-frame body takes roughly **1.4×**; 60 MP takes **1.6×**.
+
+This is a starting point, not a constant — Adobe does not document Size as linear in pixels, so the rule gets you close and the 100% check settles it. When a look ships as a preset family across two bodies, this is the one number that must differ between the variants; everything else in the creative layer stays identical.
 
 **Grain last, and check it at 100%.** At fit-to-screen, grain is invisible at any setting — you cannot judge it zoomed out.
 

@@ -97,7 +97,11 @@ Eight bands: **Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta.** Each h
 
 **Sky:** `Blue Sat +8 to +15`, `Blue Lum −10 to −20`. Darkening blue is what makes a sky look deep — not saturating it. `Aqua Hue +10` pulls a cyan sky toward true blue.
 
-**Foliage:** `Green Hue +10 to +20` moves grass away from the yellow-green digital cameras produce, toward a believable green. `Yellow Hue +8` does the same for sunlit leaves.
+**Foliage — correcting:** `Green Hue +10 to +20` moves grass away from the yellow-green digital cameras produce, toward a believable green. `Yellow Hue +8` does the same for sunlit leaves.
+
+**Foliage — going the other way, deliberately:** `Green Hue −10 to −25` pushes green *toward* yellow, which is where olive, khaki and the muted yellow-green of most film emulations live. This is the opposite sign from the correction above, and it is the more common creative move — reach for it whenever the target look has olive foliage rather than believable green. Pair with `Green Sat −15 to −25` and `Green Lum −10`; positive Green Hue here is the usual reason a film look comes out with grass that is too clean and too blue.
+
+The sign itself: **negative Green Hue → toward yellow, positive → toward aqua.** Full table in `references/09-presets-xmp.md`.
 
 **Muted look:** pull Sat down 10–20 on every band *except* Orange — skin keeps its colour while the surroundings drain.
 

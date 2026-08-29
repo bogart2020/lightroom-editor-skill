@@ -92,11 +92,22 @@ skills/lightroom-editor/
    ├─ 07-sources.md        per-camera profiles + universal diagnosis method
    ├─ 08-looks.md          reverse-engineering, film looks, modern looks, genres
    ├─ 09-presets-xmp.md    XMP template, attribute map, mobile import
-   └─ 10-diagnostics.md    failure signatures, critique method, check-yourself lists
+   ├─ 10-diagnostics.md    failure signatures, critique method, check-yourself lists
+   └─ 11-intake.md         look-word decompositions, Intent-vs-source conflicts
+  scripts/
+   ├─ preset-check.py      validates a generated .xmp before it reaches Lightroom
+   ├─ look-match.py        does the preset grade the colour the reference has?
+   ├─ crs-render.py        renders the modellable sliders onto a photo
+   ├─ crs-vocabulary.txt   the crs: attribute names Lightroom actually accepts
+   └─ tune.py              scores a render in dE2000 and tunes toward the target
 scripts/leak-check.sh      CI-able check that no private material is tracked
 ```
 
-The SKILL.md is an orchestrator: it routes to a reference file only when that file's branch fires, so a simple question doesn't load all eleven.
+The scripts live *inside* the skill because SKILL.md requires them at handover; a
+skill that references a script it does not ship declares a gate no install can
+satisfy.
+
+The SKILL.md is an orchestrator: it routes to a reference file only when that file's branch fires, so a simple question doesn't load all twelve.
 
 ## Notes
 

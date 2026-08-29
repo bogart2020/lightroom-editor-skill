@@ -17,8 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SKILL = ROOT / "skills" / "lightroom-editor"
 REFS = SKILL / "references"
-CHECK = ROOT / "scripts" / "preset-check.py"
-VOCAB = ROOT / "scripts" / "crs-vocabulary.txt"
+SCRIPTS = SKILL / "scripts"
+CHECK = SCRIPTS / "preset-check.py"
+VOCAB = SCRIPTS / "crs-vocabulary.txt"
 CRS = "http://ns.adobe.com/camera-raw-settings/1.0/"
 
 results = []
@@ -222,7 +223,75 @@ def layer1_document(pre_fix=False):
           re.search(r"\|\s*A vague look word to decompose.*\|\s*`references/11-intake\.md`\s*\|", skl),
           "SKILL.md routing table has no row for references/11-intake.md")
 
+    # BUG (live use): 08-looks.md's own worked recipes built warmth with a
+    # negative Yellow Hue — the exact move 09-presets-xmp.md documents as the
+    # signature failure. A model routed only to 08-looks.md shipped it.
+    colr = read("skills/lightroom-editor/references/02-color.md", pre_fix)
+    fx = read("skills/lightroom-editor/references/03-effects.md", pre_fix)
+    check("no look recipe builds warmth with a negative Yellow Hue",
+          not re.search(r"Yellow Hue\s*[−-]\s*\d", looks),
+          "a recipe still drags HueAdjustmentYellow negative, which rotates "
+          "yellows to orange and then red")
+    check("the warm recipes point at the sign table",
+          looks.count("never by dragging `Yellow Hue` negative") >= 2,
+          "the warm-look recipes do not warn against the negative Yellow Hue move")
+
+    # BUG (live use): 02-color.md's only Green Hue example was the corrective
+    # direction, so the far more common olive/film move was set backwards.
+    check("Green Hue documents the creative direction as well as the corrective",
+          "Foliage — going the other way" in colr and
+          re.search(r"Green Hue\s*[−-]10 to [−-]25", colr),
+          "02-color.md still shows only the 'away from yellow-green' direction")
+    check("Green Hue states its sign inline",
+          "negative Green Hue → toward yellow" in colr,
+          "the reader must open another file to decode the Green Hue sign")
+
+    # BUG (live use): 'Size is resolution-relative' with no relationship given,
+    # so grain size across a two-body preset family was a guess.
+    check("grain Size gives an actual scaling rule",
+          "√(MP_target / 24)" in fx,
+          "03-effects.md still states the dependency without a formula")
+    check("grain Size gives resolution-indexed values",
+          "| 12 MP | 24 MP | 48 MP |" in fx.replace(" 60 MP |", ""),
+          "no per-resolution grain Size table")
+
+    # BUG (live use): every look route assumed a single source, so building one
+    # look for two bodies meant re-deriving the correction/creative split.
+    check("a route exists for one look across several sources",
+          "## Route 5 — One look, several sources" in looks,
+          "08-looks.md has no guidance for preset families")
+    check("Route 5 is routed from SKILL.md",
+          "a preset family" in skl,
+          "SKILL.md routing table does not mention the multi-source case")
+
+    # BUG (live use): Route 1 measured reference images with no word on
+    # provenance, leaving the copyright boundary to be re-decided each session.
+    check("reference-image provenance boundary is stated",
+          "Measure freely; hand back slider values, never the file." in looks,
+          "Route 1 does not say measuring is fine but redistribution is not")
+
+    # BUG (live use): the Fidelity gate demanded a number, but the question as
+    # asked collects a qualitative bucket, which nothing mapped to a deviation.
+    check("Fidelity buckets carry their own numbers",
+          "Ask Fidelity with the numbers already attached" in skl and
+          "`±3°`" in skl and "`±10°`" in skl,
+          "nothing converts a qualitative Fidelity answer into a deviation")
+
+    # BUG (live use): scripts/ was mandatory in Red flags but lived outside the
+    # packaged skill, so no install could satisfy the gate.
+    check("Step 5 handles an install with no scripts directory",
+          "but no `scripts/` directory" in skl,
+          "Step 5 branches only on the code environment, not on missing scripts")
+    check("the scripts red flag tolerates their absence without faking a check",
+          "never report a check you did not run" in skl,
+          "the red flag still demands scripts that an install may not carry")
+
     if not pre_fix:
+        for s in ("preset-check.py", "look-match.py", "crs-render.py",
+                  "tune.py", "crs-vocabulary.txt"):
+            check(f"{s} ships inside the packaged skill",
+                  (SKILL / "scripts" / s).exists(),
+                  f"{s} is referenced by the skill but outside skills/lightroom-editor/")
         intake = read("skills/lightroom-editor/references/11-intake.md")
         check("11-intake.md carries the decomposition ladders",
               "Moody" in intake and "Cinematic" in intake and "Vintage" in intake,
@@ -351,7 +420,7 @@ def layer3_corpora():
 
 
 # ---------------------------------------------------------------- layer 4
-LOOK = ROOT / "scripts" / "look-match.py"
+LOOK = SCRIPTS / "look-match.py"
 
 PRESET = """<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
@@ -500,8 +569,8 @@ def layer5_render():
         skip("renderer and tuner invariants (12 checks)",
              "numpy not installed — pip install -r tests/requirements.txt")
         return
-    crs = _load("crs_render", ROOT / "scripts" / "crs-render.py")
-    tune = _load("tune", ROOT / "scripts" / "tune.py")
+    crs = _load("crs_render", SCRIPTS / "crs-render.py")
+    tune = _load("tune", SCRIPTS / "tune.py")
     img = synth_linear(np)
 
     # deterministic: a score you cannot reproduce is not a measurement.

@@ -86,6 +86,23 @@ ProRAW, +40 Clarity on a portrait. Name the conflict in one line with the cost
 of each side, then stop and let the user pick which side wins.
 `references/11-intake.md` carries the archetypes.
 
+**Ask Fidelity with the numbers already attached.** Nobody answers "how close?"
+in degrees, so do not ask for degrees — offer the buckets, and let the choice
+*be* the number. The verifier and `scripts/look-match.py --warmer/--cooler` both
+need a figure, and this is where it comes from:
+
+| Offer this | It means | Deviation |
+|---|---|---|
+| **Match closely** | Land on the reference; full intensity | `±3°` |
+| **Same family, my own take** | The reference's character, not its exact temperature | `±10°` |
+| **Loose inspiration** | A starting point to move well away from | `±20°` or more |
+
+Then say which direction — warmer, cooler, more contrast, more muted — and
+record the signed number with the preset. If the user answers in words instead
+("a bit warmer, not that orange"), map it to the nearest bucket, state the
+number you mapped it to, and let them correct it. A qualitative answer is fine;
+an unrecorded one is not.
+
 **Fidelity is the one that cannot be inferred.** A reference image tells you what
 *it* looks like, never how close the user wants to land. "Warm and golden" is a
 different target from an album cover that measures orange, and a recipe faithful
@@ -184,6 +201,15 @@ plainly, deliver the preset marked unverified, and offer the two ways to close
 it: run the scripts in a code environment, or apply the preset in Lightroom and
 send back the export. Never imply a score you did not measure.
 
+**With a code environment but no `scripts/` directory** — check before you rely
+on them; some installs carry only `SKILL.md` and `references/`. This is not a
+reason to refuse the preset, and not a reason to claim a verification that never
+ran. Say which scripts are missing, measure what you can by hand — reference
+hue range, black point, clipping, per-band content are all readable with any
+image library — deliver the preset marked unverified, and name what the missing
+gate would have caught. The Red flags below require the scripts to be *run*
+where they exist, not invented where they do not.
+
 Masked adjustments pass through untouched and are counted as unverified; the
 renderer models global sliders only.
 
@@ -214,6 +240,7 @@ Read the file when its branch fires. Do not read all of them.
 | Any edit that should apply to part of the frame only | `references/06-masking.md` |
 | Identifying the source and its bias; unknown or unlisted cameras | `references/07-sources.md` |
 | Replicating a reference image, film emulation, named looks, genre starting points | `references/08-looks.md` |
+| One look shipped for several cameras or phones — a preset family | `references/08-looks.md` Route 5, with `references/07-sources.md` |
 | Writing an `.xmp`, attribute names, importing a preset on mobile | `references/09-presets-xmp.md` |
 | Critiquing an existing edit; something looks wrong and the user cannot name it | `references/10-diagnostics.md` |
 | A vague look word to decompose, or an Intent that fights the Source or Destination | `references/11-intake.md` |
@@ -233,6 +260,6 @@ Each of these means stop and correct course:
 - Offering a preset that carries Exposure, Temp, or Tint → those are per-photo. A portable preset omits them. `IncrementalTemperature`/`IncrementalTint` are the portable pair, but `IncrementalTint` positive is *toward magenta* — check the sign in `references/09-presets-xmp.md`.
 - Writing a tone curve without `ToneCurveName2012="Custom"` → Lightroom discards every curve silently, including the Blue curve that carries warm highlights. This is the most common cause of "I asked for golden and got orange".
 - Adjusting a hue band the reference image does not contain → read the reference's band content first (`references/08-looks.md`).
-- Handing over a preset without running `scripts/preset-check.py` and `scripts/look-match.py` → both catch failures that are invisible until the user applies the preset.
+- Handing over a preset without running `scripts/preset-check.py` and `scripts/look-match.py` → both catch failures that are invisible until the user applies the preset. If the scripts are absent from this install, say so and mark the preset unverified; never report a check you did not run.
 - Reporting a score without its coverage, or calling a score a Lightroom match → the renderer approximates Camera Raw and does not reproduce it. Report what was verified and what was not modelled.
 - Letting the tuner move Clarity, Texture, Dehaze, Highlights, Shadows, Color Grading or a hue band → none of them is modelled. Step 5 tunes white balance, exposure, the curve and the endpoints; the rest holds what Step 3 and Step 4 chose.

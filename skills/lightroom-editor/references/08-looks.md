@@ -10,6 +10,8 @@ Four routes: decompose a reference image, emulate film, apply a named modern loo
 
 The method for "make my photo look like this one." Read the reference in this order; each answer maps to a specific control.
 
+**On reference images you do not own.** References for this kind of work are usually press photos, album art or someone else's portfolio. Measuring them — hue range, black point, per-band content, zone statistics — is fine whatever their copyright status; you are reading numbers off a picture to calibrate a recipe, and the numbers are not the picture. What the skill never does is reproduce, redistribute, embed or output the reference image itself, or present the resulting look as the original photographer's work. Measure freely; hand back slider values, never the file.
+
 ### 0. Pin the reference set, and pin the target
 
 Two questions come before any reading, and getting either wrong invalidates
@@ -137,10 +139,16 @@ Contrast −5   Highlights −15   Shadows +15   Blacks +15
 Temp +250K from neutral
 Curve: 0,12  128,132  255,246
 Blue curve: 0,14  255,244
-Vibrance +15   Yellow Sat +10   Yellow Hue −5
+Vibrance +15   Yellow Sat +10   Orange Lum +6
 Color Grading: Highlights Hue 50 Sat 14, Shadows Hue 40 Sat 6
 Grain: Amount 18  Size 26  Roughness 55
 ```
+
+Warmth here is carried by Orange saturation and luminance, the Blue curve
+and Color Grading — never by dragging `Yellow Hue` negative. Negative
+`HueAdjustmentYellow` rotates the image's own yellows into orange, and into
+red once a positive `IncrementalTint` lands on top. Sign table and the full
+explanation: `references/09-presets-xmp.md`.
 
 **Tungsten cinema look — 3200K-balanced, cool shadows:**
 ```
@@ -234,9 +242,15 @@ Contrast +8   Highlights −30   Shadows +20   Whites +12   Blacks +6
 Curve: 0,6  192,200  255,250
 Red curve: 192,204   Blue curve: 0,8  255,246
 Vibrance +15
-Orange Sat +5   Orange Lum +8   Yellow Hue −6
+Orange Sat +5   Orange Lum +8   Yellow Sat +6
 Color Grading: Highlights Hue 40 Sat 14, Shadows Hue 30 Sat 6
 ```
+
+Warmth here is carried by Orange saturation and luminance, the Blue curve
+and Color Grading — never by dragging `Yellow Hue` negative. Negative
+`HueAdjustmentYellow` rotates the image's own yellows into orange, and into
+red once a positive `IncrementalTint` lands on top. Sign table and the full
+explanation: `references/09-presets-xmp.md`.
 
 **Muted matte — soft, quiet, editorial:**
 ```
@@ -283,6 +297,33 @@ Where to start, and what to protect.
 | **Product** | Accurate color, clean white | Whites, sharpening, neutrality | Any grade; Vibrance above +8 |
 | **Architecture** | Straight lines, neutral greys | Geometry, Clarity, Texture | Warm grades that misread as time of day |
 | **Night / astro** | Star color, shadow detail | Color NR, Contrast, Blacks | Luminance NR above 40; Dehaze |
+
+---
+
+## Route 5 — One look, several sources
+
+For a preset *family*: the same look shipped as variants for different bodies —
+iPhone ProRAW and Sony ARW, X100VI and a phone, a two-camera wedding set. The
+mistake is grading each source separately and hoping they land together. They
+will not: two independently-built looks drift, and the drift shows the moment
+the photos sit side by side in one feed.
+
+**Split the recipe in two, and treat the halves completely differently.**
+
+| Layer | Per source? | What lives here |
+|---|---|---|
+| **Correction** | **Different for every source** | Profile, white balance, the cast fix, lens/optics, noise and sharpening, and the curve points that undo the source's own tone mapping. See `references/07-sources.md` — this is exactly the per-body bias it documents. |
+| **Creative** | **Byte-identical across variants** | Color Mix bands, Color Grading wheels, curve *shape* above the correction, Texture, Clarity, Dehaze, vignette. This layer is the look. If it differs between variants, they are two looks. |
+
+The method:
+
+1. **Correct each source to the same neutral.** Not "to something reasonable" — to the *same* place. Grey should measure grey on both, and the black point should land at the same value. This is the whole job; if it is right, the creative layer transplants cleanly.
+2. **Build the creative layer once**, on whichever file has the most latitude — a true Bayer raw over a ProRAW or a JPEG. Freedom to push comes from headroom, and it is easier to pull a look back than to invent it on a file that has already spent its range.
+3. **Transplant that layer unchanged** onto the other corrected sources, and change nothing in it to "make it look right". If a variant looks wrong, the bug is in step 1's correction, not in the look.
+4. **Grain Size is the one exception**, because it is resolution-relative and the bodies differ in megapixels. Scale it per variant with the rule in `references/03-effects.md`; every other creative number stays put.
+5. **Verify the variants against each other**, not only against the reference. Run each through the Step 5 score, and expect the *same* look to land at similar zone statistics. A gap between variants means a correction gap.
+
+Headroom caps how far the family can go: the look must be reachable on the **weakest** source in the set, or that variant will be the one that bands. Build to that ceiling, and the stronger files will hold it comfortably.
 
 ---
 
