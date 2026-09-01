@@ -97,6 +97,23 @@ SKIN_SPREAD_LIMIT = 15.0
 # None and the hue check is skipped rather than decided on noise.
 HUE_CONCENTRATION_MIN = 0.72
 
+# DERIVED. How many pixels the Tint probe renders. Tint is a global channel
+# gain, so the a*-per-Tint relationship is a property of the file's colour
+# distribution and not its resolution -- but "should not matter" is not
+# evidence, so it was measured against full-resolution probes of eleven 24MP
+# Sony ARW frames:
+#
+#      200k pixels -> worst disagreement 1.646 Tint units
+#      500k pixels -> worst disagreement 1.466
+#     1000k pixels -> worst disagreement 0.447
+#     2000k pixels -> worst disagreement 0.577   (sampling noise, not better)
+#
+# Tint is typed as a whole number, so the bar is half a unit: below that the
+# subsampled probe and the full one round to the same slider value. One
+# million is the first size that clears it. It also turns a two-minute
+# analysis of a 24MP RAW into a fifteen-second one.
+PROBE_PIXELS = 1_000_000
+
 RAW_SUFFIXES = {".arw", ".cr2", ".cr3", ".nef", ".raf", ".dng", ".rw2", ".orf"}
 
 ZONES = 9
@@ -308,6 +325,29 @@ def measure_cast(rgb, min_share=NEUTRAL_MIN_SHARE):
     The search is seeded from the least colourful tenth of the frame rather
     than from the origin, so a strong cast is still found: seeding at zero
     would abstain precisely when the cast is worst.
+
+    KNOWN LIMIT, measured, not fixable from one frame. A scene whose bulk is
+    genuinely but faintly tinted reads as a cast. A photograph of an office
+    block faced in cyan glass measured 83.7% near-neutral content leaning
+    a* -4.20, and asked for Tint +92 to remove what was the building.
+
+    The guard that catches a forest does not catch this one: the forest's
+    green is far enough off neutral that the cluster centre clears
+    CHROMA_FLOOR and the reading is refused, while the glass sits just inside
+    it. Two candidate discriminators were tried against eleven RAW frames and
+    both failed --
+
+      zone uniformity   a real white-balance residual should be flat across
+                        tones and subject colour should not. The false
+                        positive scored 2.73 of a* spread, mid-range among
+                        frames measuring correctly (0.29 to 9.59).
+      probe sensitivity  ranged 0.019 to 0.340 across the same frames with no
+                        relation to whether the reading was real.
+
+    So this is reported, not solved. One frame does not carry the information
+    needed to separate "the light was green", "the glass is green" and "the
+    sensor is green"; only something that already knows what the subject is
+    can. Read the neutral fraction, read the number, and look at the picture.
     """
     lab = rgb_to_lab(rgb)
     lit = lab[..., 0] >= L_FLOOR      # near-black chroma is unreliable
@@ -468,30 +508,48 @@ def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT,
             "a": float(a[warm].mean()), "b": mb}
 
 
-def probe_tint(crs, lin, step=10.0, rounds=5, settle=0.05):
-    """Tint units that undo this file's measured a* cast, measured off THIS file.
+def probe_tint(crs, lin, step=10.0, rounds=5, settle=0.05,
+               max_pixels=PROBE_PIXELS):
+    """What Tint undoes this file's measured a* cast. Measured, not assumed.
 
     Adobe publishes no mapping from CIELAB chroma to a Tint unit, so none is
     assumed. The renderer is asked instead: move Tint by a known step, see how
-    far a* actually travels on this image, and invert that.
+    far a* actually travels on this image, and invert that. One secant is not
+    enough -- Tint acts as channel gains, so its effect on a* is not linear
+    across the range -- so the probe repeats from the accumulated value until
+    the residual settles, always rendering from the original file because the
+    renderer's moves do not compose.
 
-    One step is not enough. Tint acts as channel gains, so its effect on a* is
-    not linear across the range, and a single secant lands roughly two thirds
-    of the way. So the probe repeats from the accumulated value until the
-    residual settles, always rendering from the original file rather than
-    stacking renders, since the renderer's moves do not compose.
+    Tint is a global channel gain, so the relationship is a property of the
+    file's colour distribution and not of its resolution. The probe therefore
+    runs on a random subsample: on a 24MP RAW that is the difference between
+    two minutes and a fraction of a second, and the answers agree.
 
-    The answer is our renderer's Tint, not Adobe's, and it is only as good as
-    crs-render.py -- which models Tint as channel gains around the file's own
-    white balance and says plainly that it approximates Camera Raw rather than
-    reproducing it.
+    Returns a dict, because the number alone is not enough to judge it:
+
+      tint         the Tint that zeroes the measured cast, in OUR renderer's
+                   units. Not Adobe's, and only as good as crs-render.py --
+                   which approximates Camera Raw rather than reproducing it.
+      sensitivity  a* units moved per Tint unit on THIS file. Reported
+                   because the tint alone cannot be judged without it, but it
+                   does NOT tell you whether the lean is a cast: across eleven
+                   RAW frames it ranged 0.019 to 0.340 with no relation to
+                   whether the reading was real. RAW simply sits lower than
+                   the 0.62 an 8-bit grey patch gives.
+      rounds       how many secants it took, or 0 if there was nothing to do.
     """
+    flat = np.asarray(lin).reshape(-1, 3)
+    if flat.shape[0] > max_pixels:
+        idx = np.random.default_rng(0).choice(flat.shape[0], max_pixels, replace=False)
+        flat = flat[idx]
+    sample = flat[:, None, :]           # the renderer wants (H, W, 3)
+
     def cast_at(t):
-        x = crs.render(lin, {"IncrementalTint": t}) if t else lin
+        x = crs.render(sample, {"IncrementalTint": t}) if t else sample
         c = measure_cast(crs.linear_to_srgb(x).reshape(-1, 3))
         return None if c is None else c["a"]
 
-    total = 0.0
+    total, slope, used = 0.0, None, 0
     for _ in range(rounds):
         base = cast_at(total)
         if base is None or abs(base) < settle:
@@ -499,5 +557,8 @@ def probe_tint(crs, lin, step=10.0, rounds=5, settle=0.05):
         moved = cast_at(total + step)
         if moved is None or abs(moved - base) < 1e-9:
             break
+        if slope is None:
+            slope = (moved - base) / step
         total += -base * step / (moved - base)
-    return total
+        used += 1
+    return {"tint": total, "sensitivity": slope, "rounds": used}
