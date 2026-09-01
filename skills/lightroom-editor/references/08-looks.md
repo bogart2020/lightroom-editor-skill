@@ -6,6 +6,25 @@ Four routes: decompose a reference image, emulate film, apply a named modern loo
 
 ---
 
+
+## The band name is not a target
+
+A Color Mix band covers roughly thirty degrees. Everything from about 15° to
+45° is called **Orange**, so an amber reference measuring 40° is reported as
+Orange at 90% — and a Color Grading hue placed at Orange's own centre of 30°
+lands ten degrees redder than the reference actually is. That is the whole
+mechanism behind "my warm yellow reference came out orange".
+
+Measured on a set of warm amber press photographs: every frame read as band
+Orange, and every frame's measured centre sat at 36-41°. Grading at the band
+centre would have been 6-11° too red on all of them.
+
+**Grade at the measured centre**, which `scripts/look-analyze.py` prints as
+`hue centre ... GRADE HERE`, and `scripts/look-match.py` prints beside the
+range. Use the band share to decide *which* bands to touch and how hard. Never
+read the band's name as the hue to grade at.
+
+
 ## Route 1 — Reverse-engineering a reference image
 
 The method for "make my photo look like this one." Read the reference in this order; each answer maps to a specific control.

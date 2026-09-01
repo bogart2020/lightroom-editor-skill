@@ -63,12 +63,25 @@ def band_profile(path):
 
 
 def hue_range(paths):
-    """Measured range, plus per-frame means so a mixed set can be refused."""
+    """Measured range, its centre and core, plus per-frame means.
+
+    The centre matters as much as the range. A band NAME covers roughly
+    thirty degrees -- everything from about 15 to 45 degrees is "Orange" --
+    so a reference measuring 40 degrees is reported as Orange, and a grade
+    placed at the Orange band centre of 30 lands ten degrees redder than the
+    reference actually is. That is how a warm amber look comes out orange.
+
+    The core is the 25th-75th percentile: the half of the reference's colour
+    closest to its centre. A grading hue inside the full range but outside
+    the core is legal and still a warning, because it sits at the edge of
+    what the reference contains rather than at the middle of it.
+    """
     per = [(p, ls.load_rgb(p)) for p in paths]
     means = [(os.path.basename(p), m) for p, rgb in per
              if (m := ls.frame_hue_mean(rgb)) is not None]
     stacked = np.concatenate([rgb for _, rgb in per], axis=0)
-    return ls.hue_range(stacked), means
+    return (ls.hue_range(stacked), ls.frame_hue_mean(stacked),
+            ls.hue_range(stacked, 25.0, 75.0), means)
 
 
 def preset_moves(path):
@@ -141,7 +154,7 @@ def main():
             fails.append(f"{name} carries {pct:.1f}% of the reference's colour "
                          "and the preset does not touch it")
 
-    rng, means = hue_range(refs)
+    rng, centre, core, means = hue_range(refs)
     if len(means) > 1:
         spread = max(m for _, m in means) - min(m for _, m in means)
         print(f"\n  reference set: {len(means)} frames, means "
@@ -170,6 +183,9 @@ def main():
         print(f"\n  reference hue range (10th-90th pct): {lo:.0f}-{hi:.0f}°"
               f"    Balance {bal:+d}"
               f" ({'favours shadows' if bal < 0 else 'favours highlights' if bal else 'even'})")
+        if centre is not None:
+            print(f"  reference hue centre: {centre + shift:.0f}° — grade here. The band "
+                  f"name above\n  covers about thirty degrees and its centre is not this one.")
         for zone, h in hues.items():
             if h < 0:
                 continue
@@ -180,6 +196,24 @@ def main():
             target = "target" if shift else "reference"
             mark = "ok" if not off else f"{off:.0f}° {'below' if h < lo else 'above'} the {target}"
             print(f"  {zone:<11}{h:4d}°   {mark}")
+            if off < TOLERANCE and core and centre is not None:
+                # How far off the reference's centre this grade sits, against
+                # an allowance taken from the reference itself: the half-width
+                # of its middle half, floored at the gate's own TOLERANCE so a
+                # very tightly concentrated reference does not warn on every
+                # grade. No new threshold -- both numbers already exist.
+                clo, chi = core[0] + shift, core[1] + shift
+                half = ((chi - clo) % 360) / 2.0
+                allow = max(half, TOLERANCE)
+                dev = abs(((h - (centre + shift)) + 180) % 360 - 180)
+                if dev > allow:
+                    warns.append(f"Color Grading {zone} at {h}° sits {dev:.0f}° off "
+                                 f"the reference's centre of {centre + shift:.0f}° "
+                                 f"(its middle half runs {clo:.0f}-{chi:.0f}°). Inside "
+                                 f"the range, so not a failure — but it grades the "
+                                 f"edge of the look rather than the look. A band NAME "
+                                 f"spans about thirty degrees; do not grade at the "
+                                 f"band's centre, grade at the measured one.")
             if off >= TOLERANCE:
                 weight = " — and Balance weights it hardest" if (
                     zone == "shadows" and bal < 0) else ""

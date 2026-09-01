@@ -468,6 +468,9 @@ def layer4_look():
         skip("look gate (11 checks)",
              "Pillow/numpy not installed — pip install -r tests/requirements.txt")
         return
+    import colorsys as _colorsys
+    import numpy as _np
+    from PIL import Image as _Image
     with tempfile.TemporaryDirectory() as d:
         ref = Path(d) / "ref.png"
         golden_ref(ref, hue_deg=40)          # amber reference, ~40 deg
@@ -535,12 +538,43 @@ def layer4_look():
         check("the same preset passes once the deviation is stated",
               rc == 0 and "stated deviation: +12" in out, out.strip()[-300:])
 
+        # BUG (found on real photographs): every frame of a warm amber set
+        # measured band "Orange" at 85-93%, but its actual hue centre sat at
+        # 36-41 deg while the Orange band centre is 30 deg. Reading the band
+        # NAME and grading at the band centre landed 6-11 deg too red — the
+        # "why is my warm yellow reference coming out orange" failure. The
+        # band label names a 30-degree-wide bucket; it is not a target.
+        wide = Path(d) / "amber.png"
+        _rr = _np.random.default_rng(21)
+        _px = [tuple(int(v * 255) for v in
+                     _colorsys.hsv_to_rgb(((40 + _rr.normal(0, 7)) % 360) / 360,
+                                          0.42, 0.30 + 0.45 * _rr.random()))
+               for _ in range(60000)]
+        _im = _Image.new("RGB", (300, 200))
+        _im.putdata(_px)
+        _im.save(wide)
+
+        rc, out = run_look(wide, preset(
+            'crs:SplitToningShadowHue="30" crs:ColorGradeMidtoneHue="30" '
+            'crs:SaturationAdjustmentOrange="+12" '
+            'crs:SaturationAdjustmentYellow="+6"', "bandcentre"))
+        check("the reference's hue centre is reported, not just its range",
+              "centre" in out and "grade here" in out, out.strip()[-500:])
+        check("a grade at the band centre is flagged as off the reference's centre",
+              "off the reference's centre" in out and "band's centre" in out,
+              out.strip()[-500:])
+
+        rc, out = run_look(wide, preset(
+            'crs:SplitToningShadowHue="40" crs:ColorGradeMidtoneHue="40" '
+            'crs:SaturationAdjustmentOrange="+12" '
+            'crs:SaturationAdjustmentYellow="+6"', "measuredcentre"))
+        check("a grade at the measured centre is not flagged",
+              rc == 0 and "off the reference's centre" not in out, out.strip()[-500:])
+
         # REGRESSION: a reference with no dominant hue must not silently skip
         # the Color Grading check and report a clean GREEN. The gate has to
         # say which checks actually ran.
         noise = Path(d) / "noise.png"
-        import numpy as _np
-        from PIL import Image as _Image
         _Image.fromarray(_np.random.default_rng(11)
                         .integers(60, 200, (200, 200, 3), dtype=_np.uint8)).save(noise)
         rc, out = run_look(noise, preset(

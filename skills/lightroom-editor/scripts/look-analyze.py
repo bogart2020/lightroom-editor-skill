@@ -100,8 +100,20 @@ def report(path, as_source=False, portrait=False, profile=None):
         print(f"                      look-match.py cannot run its hue check here.")
     else:
         lo, hi = rng
+        core = ls.hue_range(rgb, 25.0, 75.0)
+        centre = ls.frame_hue_mean(rgb)
         print(f"\n  hue range (10th-90th pct)   {lo:.0f}-{hi:.0f}°   on the RGB wheel,")
         print( "                              the same wheel crs: hue values use")
+        print(f"  hue centre                  {centre:.0f}°   GRADE HERE")
+        if core:
+            print(f"  middle half                 {core[0]:.0f}-{core[1]:.0f}°")
+        top = max(prof.items(), key=lambda kv: kv[1])
+        band_centre = dict(ls.BANDS)[top[0]]
+        off = abs(((centre - band_centre) + 180) % 360 - 180)
+        print(f"\n  The dominant band is {top[0]} at {top[1]:.1f}%, and its centre is "
+              f"{band_centre}°.\n  The measured centre is {centre:.0f}°, {off:.0f}° away. A band "
+              f"name covers about\n  thirty degrees, so it is a label, not a target: grading at "
+              f"the band\n  centre is what turns a warm amber reference into an orange one.")
 
     print(f"  black point                 {ls.black_point(rgb):.4f}   "
           "relative luminance, linear")
