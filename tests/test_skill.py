@@ -679,6 +679,213 @@ def layer5_render():
           f"modelled={modelled2}; tuned sliders were not counted as verified")
 
 
+# ---------------------------------------------------------------- layer 6
+# The measurement core. Every check here is ground truth: either a published
+# CIELAB value, or a known transform applied to a synthetic image which the
+# core must recover. Nothing is asserted against a number this repo invented.
+
+STATS = SCRIPTS / "lookstats.py"
+
+
+def load_lookstats():
+    spec = importlib.util.spec_from_file_location("lookstats", STATS)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# CIE L*a*b* (D65, 2 deg observer) for the sRGB primaries. These are published
+# reference values, not measurements taken from this code — they are what any
+# correct sRGB->CIELAB implementation must produce.
+PUBLISHED_LAB = {
+    "white": ((1.0, 1.0, 1.0), (100.0, 0.0, 0.0)),
+    "red":   ((1.0, 0.0, 0.0), (53.2408, 80.0925, 67.2032)),
+    "green": ((0.0, 1.0, 0.0), (87.7347, -86.1827, 83.1793)),
+    "blue":  ((0.0, 0.0, 1.0), (32.2970, 79.1875, -107.8602)),
+}
+
+
+def layer6_lookstats():
+    print("\nLAYER 6 — measurement core (lookstats)")
+    try:
+        import numpy as np
+        from PIL import Image
+    except ImportError:
+        skip("measurement core", "numpy/Pillow not installed")
+        return
+    import colorsys
+    ls = load_lookstats()
+
+    # --- colour conversion, pinned to published values -------------------
+    worst, detail = 0.0, ""
+    for name, (rgb, want) in PUBLISHED_LAB.items():
+        got = ls.rgb_to_lab(np.array([rgb], dtype=np.float64))[0]
+        err = max(abs(g - w) for g, w in zip(got, want))
+        if err > worst:
+            worst, detail = err, f"{name}: got {tuple(round(float(v), 4) for v in got)}, published {want}"
+    check("sRGB primaries convert to the published CIELAB values",
+          worst < 0.05, detail)
+
+    # The thresholds must be what their stated derivation produces. Written
+    # after a hand-typed literal was found to be wrong by 2.1 chroma units:
+    # a constant nobody can recompute is a constant that drifts.
+    dc, dl = ls.derive_floors()
+    check("the hue floors match their stated derivation",
+          abs(dc - ls.CHROMA_FLOOR) < 5e-4 and abs(dl - ls.L_FLOOR) < 5e-4,
+          f"CHROMA_FLOOR literal {ls.CHROMA_FLOOR} vs derived {dc:.4f}; "
+          f"L_FLOOR literal {ls.L_FLOOR} vs derived {dl:.4f}")
+
+    # Not exactly zero, and it cannot be: the published sRGB->XYZ matrix is
+    # rounded to seven decimals, so its Y row sums to 1.0000001 rather than 1.
+    # That 1e-7 excess propagates to about 1e-5 of a*. Anything larger would
+    # mean a genuinely skewed matrix, which is what this bound catches.
+    grey = ls.rgb_to_lab(np.array([(0.5, 0.5, 0.5)], dtype=np.float64))[0]
+    check("mid grey sits on the neutral axis",
+          abs(grey[1]) < 1e-4 and abs(grey[2]) < 1e-4,
+          f"grey measured a*={grey[1]:.6f} b*={grey[2]:.6f} — a neutral input "
+          "must not carry colour beyond the matrix's own rounding")
+
+    with tempfile.TemporaryDirectory() as d:
+        # --- weight follows chroma, not HSV saturation -------------------
+        # Both halves have HSV S=0.5, so the old S-weighted path scores them
+        # equally. A light orange carries far more actual colour than a dark
+        # desaturated blue, and Lab chroma says so.
+        p = Path(d) / "chroma.png"
+        im = Image.new("RGB", (200, 200))
+        px = []
+        for y in range(200):
+            for x in range(200):
+                h, s, v = (40 / 360, 0.5, 0.9) if x < 100 else (200 / 360, 0.5, 0.25)
+                r, g, b = colorsys.hsv_to_rgb(h, s, v)
+                px.append((round(r * 255), round(g * 255), round(b * 255)))
+        im.putdata(px)
+        im.save(p)
+        prof = ls.band_profile(ls.load_rgb(p))
+        check("colour weight follows Lab chroma, not HSV saturation",
+              prof["Orange"] > 2 * prof["Aqua"],
+              f"Orange {prof['Orange']:.1f}% vs Aqua {prof['Aqua']:.1f}% — "
+              "equal shares mean the weight is still HSV S")
+
+        # --- downsampling must not invent hues ---------------------------
+        # 2px red/blue stripes. Any averaging filter blends them into magenta,
+        # a hue present nowhere in the file.
+        p = Path(d) / "stripes.png"
+        im = Image.new("RGB", (1200, 1200))
+        im.putdata([(255, 0, 0) if (x // 2) % 2 == 0 else (0, 0, 255)
+                    for _ in range(1200) for x in range(1200)])
+        im.save(p)
+        prof = ls.band_profile(ls.load_rgb(p, max_pixels=10_000))
+        invented = prof["Magenta"] + prof["Purple"]
+        check("downsampling does not invent hues at a hard edge",
+              invented < 1.0 and prof["Red"] > 30 and prof["Blue"] > 30,
+              f"Red {prof['Red']:.1f}% Blue {prof['Blue']:.1f}% "
+              f"Magenta+Purple {invented:.1f}% — the file contains only red and blue")
+
+        # --- round-trip ground truth -------------------------------------
+        # Build images FROM known Lab values and require the core to recover
+        # them. lab_to_srgb below is the inverse of the conversion pinned to
+        # published values above, and the first check proves the inverse.
+        def lab_to_srgb(L, a, b):
+            fy = (L + 16.0) / 116.0
+            fx, fz = fy + a / 500.0, fy - b / 200.0
+            d = 6.0 / 29.0
+            finv = lambda t: t ** 3 if t > d else 3 * d * d * (t - 4.0 / 29.0)
+            xyz = ls.D65 * np.array([finv(fx), finv(fy), finv(fz)])
+            lin = xyz @ np.linalg.inv(ls.SRGB_TO_XYZ).T
+            return ls.linear_to_srgb(np.clip(lin, 0, 1))
+
+        want = (52.0, -2.8, 0.4)
+        back = ls.rgb_to_lab(np.array([lab_to_srgb(*want)]))[0]
+        check("the test's Lab inverse round-trips through the pinned forward",
+              max(abs(g - w) for g, w in zip(back, want)) < 1e-6,
+              f"round-trip gave {tuple(round(float(v), 5) for v in back)}, wanted {want}")
+
+        def solid(path, L, a, b, size=200):
+            v = np.clip(np.round(lab_to_srgb(L, a, b) * 255), 0, 255).astype(np.uint8)
+            im = Image.new("RGB", (size, size), tuple(int(x) for x in v))
+            im.save(path)
+            return path
+
+        # --- cast: recovered when neutrals exist, refused when they do not -
+        p = Path(d) / "cast.png"
+        cast = ls.measure_cast(ls.load_rgb(solid(p, 52.0, -2.8, 0.4)))
+        check("a known cast is recovered from near-neutral content",
+              cast is not None and abs(cast["a"] + 2.8) < 0.6 and abs(cast["b"] - 0.4) < 0.6,
+              f"measured {cast}, built from a*=-2.8 b*=+0.4")
+
+        p = Path(d) / "nocast.png"
+        # A fully saturated red frame: nothing in it is near neutral, so there
+        # is no cast to be read and the engine must say so rather than guess.
+        Image.new("RGB", (200, 200), (255, 0, 0)).save(p)
+        check("cast measurement abstains when nothing is near neutral",
+              ls.measure_cast(ls.load_rgb(p)) is None,
+              "a frame with no neutral content returned a cast figure")
+
+        # The doctrine case: a forest is not a green cast. Varied foliage
+        # greens, no neutral content. Gray-world would call this a heavy green
+        # cast and prescribe a magenta correction that ruins the picture.
+        p = Path(d) / "foliage.png"
+        rng = np.random.default_rng(7)
+        greens = np.stack([rng.uniform(0.10, 0.35, 40000),
+                           rng.uniform(0.35, 0.70, 40000),
+                           rng.uniform(0.08, 0.30, 40000)], axis=1)
+        Image.fromarray((np.clip(greens, 0, 1) * 255).astype(np.uint8)
+                        .reshape(200, 200, 3)).save(p)
+        got = ls.measure_cast(ls.load_rgb(p))
+        check("a forest is not reported as a green cast",
+              got is None,
+              f"foliage returned {got} — gray-world would prescribe magenta "
+              "against a scene that is simply green")
+
+        # --- black point: a known lift in linear light --------------------
+        p = Path(d) / "lift.png"
+        lift = 0.05
+        ramp = np.linspace(0.0, 1.0, 512) * (1 - lift) + lift
+        rows = ls.linear_to_srgb(np.repeat(ramp[:, None], 3, axis=1))
+        im = Image.fromarray(np.clip(np.round(rows * 255), 0, 255)
+                             .astype(np.uint8)[None, :, :].repeat(512, axis=0))
+        im.save(p)
+        bp = ls.black_point(ls.load_rgb(p))
+        check("a known black lift is recovered in linear light",
+              abs(bp - lift) < 0.01, f"measured black point {bp:.4f}, built with {lift}")
+
+        # --- hue range stays in RGB-wheel degrees -------------------------
+        # The unit must match crs: hue attributes, so a 40 deg reference must
+        # measure ~40, not its Lab hue angle (which is nearer 60).
+        p = Path(d) / "amber.png"
+        golden_ref(p, hue_deg=40)
+        lo, hi = ls.hue_range(ls.load_rgb(p))
+        check("hue range is measured in RGB-wheel degrees",
+              36 <= lo <= 42 and 38 <= hi <= 44,
+              f"a 40 deg reference measured {lo:.1f}-{hi:.1f} deg")
+
+        p = Path(d) / "gold.png"
+        golden_ref(p, hue_deg=52)
+        lo2, hi2 = ls.hue_range(ls.load_rgb(p))
+        check("hue range tracks a known 12 deg shift",
+              abs(((lo2 + hi2) / 2 - (lo + hi) / 2) - 12) < 2.0,
+              f"40 deg ref measured {(lo+hi)/2:.1f}, 52 deg ref measured {(lo2+hi2)/2:.1f}")
+
+        # --- zones separate the grade by tone -----------------------------
+        p = Path(d) / "zones.png"
+        top = np.clip(np.round(lab_to_srgb(25.0, 4.0, 14.0) * 255), 0, 255).astype(np.uint8)
+        bot = np.clip(np.round(lab_to_srgb(80.0, -2.0, -12.0) * 255), 0, 255).astype(np.uint8)
+        arr = np.zeros((200, 200, 3), dtype=np.uint8)
+        arr[:100], arr[100:] = top, bot
+        Image.fromarray(arr).save(p)
+        zs = [z for z in ls.zones(ls.load_rgb(p)) if z["share"] > 0]
+        check("zones report the cast of each tonal region separately",
+              zs[0]["b"] > 8 and zs[-1]["b"] < -8,
+              f"darkest zone b*={zs[0]['b']:.1f} (built +14), "
+              f"brightest b*={zs[-1]['b']:.1f} (built -12)")
+
+        # --- ITA follows its published definition -------------------------
+        # ITA = arctan((L* - 50) / b*) in degrees (Chardon et al.).
+        check("ITA follows its published definition",
+              abs(ls.ita(70.0, 20.0) - 45.0) < 1e-9,
+              f"ita(L=70, b=20) returned {ls.ita(70.0, 20.0)}, must be 45")
+
+
 def main():
     if "--pre-fix" in sys.argv:
         layer1_document(pre_fix=True)
@@ -688,6 +895,7 @@ def main():
         layer3_corpora()
         layer4_look()
         layer5_render()
+        layer6_lookstats()
     passed = sum(1 for _, ok, _ in results if ok)
     total = len(results)
     tail = f"  ({len(skipped)} skipped)" if skipped else ""
