@@ -881,10 +881,103 @@ def layer6_lookstats():
               f"brightest b*={zs[-1]['b']:.1f} (built -12)")
 
         # --- ITA follows its published definition -------------------------
-        # ITA = arctan((L* - 50) / b*) in degrees (Chardon et al.).
+        # ITA = arctan((L* - 50) / b*) in degrees (Del Bino & Bernerd).
         check("ITA follows its published definition",
               abs(ls.ita(70.0, 20.0) - 45.0) < 1e-9,
               f"ita(L=70, b=20) returned {ls.ita(70.0, 20.0)}, must be 45")
+
+        # --- skin: one warm population reads, two refuse ------------------
+        p = Path(d) / "skin.png"
+        solid(p, 65.0, 12.0, 18.0)
+        got = ls.skin(ls.load_rgb(p))
+        want_ita = ls.ita(65.0, 18.0)
+        check("skin tone is measured from a single warm population",
+              got["ok"] and abs(got["ita"] - want_ita) < 1.5,
+              f"measured {got}, built from L=65 b=18 (ITA {want_ita:.1f})")
+
+        # A face against a wooden wall: two warm populations, far apart in
+        # hue. Without a face detector nothing here can say which is skin, so
+        # the engine must decline rather than average them into a number.
+        p = Path(d) / "skin-wall.png"
+        face = np.clip(np.round(lab_to_srgb(65.0, 12.0, 18.0) * 255), 0, 255).astype(np.uint8)
+        wood = np.clip(np.round(lab_to_srgb(50.0, 8.0, 40.0) * 255), 0, 255).astype(np.uint8)
+        arr = np.zeros((200, 200, 3), dtype=np.uint8)
+        arr[:100], arr[100:] = face, wood
+        Image.fromarray(arr).save(p)
+        got = ls.skin(ls.load_rgb(p))
+        check("skin measurement refuses two separated warm populations",
+              not got["ok"] and "spread" in got["reason"],
+              f"returned {got} — a face and a wooden wall cannot be told apart "
+              "by colour alone, so no figure should be given")
+
+        # --- the Tint probe is proven by round trip -----------------------
+        # No published CIELAB-to-Tint mapping exists, so the mapping is
+        # measured off this file with crs-render and then required to WORK:
+        # apply the Tint it derives, and the cast it was derived from must go.
+        spec = importlib.util.spec_from_file_location(
+            "crs_render", SCRIPTS / "crs-render.py")
+        crs = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(crs)
+
+        p = Path(d) / "greencast.png"
+        solid(p, 55.0, -3.0, 0.0)
+        lin, _ = crs.load_image(p)
+        before = ls.measure_cast(crs.linear_to_srgb(lin).reshape(-1, 3))
+        tint = ls.probe_tint(crs, lin)
+        after = ls.measure_cast(
+            crs.linear_to_srgb(crs.render(lin, {"IncrementalTint": tint}))
+            .reshape(-1, 3))
+        check("the probed Tint neutralises the cast it was derived from",
+              after is not None and abs(after["a"]) < 0.5,
+              f"cast a* {before['a']:.2f} -> Tint {tint:+.1f} -> "
+              f"a* {after['a'] if after else None}")
+
+
+# ---------------------------------------------------------------- layer 7
+ANALYZE = SCRIPTS / "look-analyze.py"
+
+
+def run_analyze(*args):
+    r = subprocess.run([sys.executable, str(ANALYZE), *map(str, args)],
+                       capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+def layer7_analyze():
+    print("\nLAYER 7 — look-analyze front door")
+    try:
+        import numpy as np
+        from PIL import Image
+    except ImportError:
+        skip("look-analyze front door (4 checks)", "Pillow/numpy not installed")
+        return
+    with tempfile.TemporaryDirectory() as d:
+        ref = Path(d) / "ref.png"
+        golden_ref(ref, hue_deg=40)
+        rc, out = run_analyze(ref)
+        check("the report prints bands, hue range, black point and zones",
+              rc == 0 and all(k in out for k in
+                              ("band", "hue range", "black point", "zone", "Orange")),
+              out.strip()[-400:])
+
+        # A refusal must be visible in the verdict, not buried.
+        rc, out = run_analyze("--source", ref)
+        check("a source with no neutral content withholds the cast and says so",
+              rc == 0 and "WITHHELD" in out and "AMBER" in out,
+              out.strip()[-400:])
+
+        # And the fallback must name what it is falling back to.
+        rc, out = run_analyze("--source", ref, "--profile", "Sony ARW, green bias")
+        check("the withheld cast names the profile it falls back to",
+              "Sony ARW, green bias" in out and "UNMEASURED" in out,
+              out.strip()[-400:])
+
+        grey = Path(d) / "grey.png"
+        Image.new("RGB", (200, 200), (128, 130, 128)).save(grey)
+        rc, out = run_analyze("--source", grey)
+        check("a source with neutral content reports a measured cast",
+              rc == 0 and "measured cast" in out and "WITHHELD" not in out.split("band")[0],
+              out.strip()[-400:])
 
 
 def main():
@@ -897,6 +990,7 @@ def main():
         layer4_look()
         layer5_render()
         layer6_lookstats()
+        layer7_analyze()
     passed = sum(1 for _, ok, _ in results if ok)
     total = len(results)
     tail = f"  ({len(skipped)} skipped)" if skipped else ""

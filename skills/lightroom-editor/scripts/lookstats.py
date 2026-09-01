@@ -65,6 +65,18 @@ L_FLOOR = 9.0104
 # anything, and it is the first thing to revisit against real photographs.
 NEUTRAL_MIN_SHARE = 0.02
 
+# POLICY, both of them, for the same reason as above.
+#   SKIN_MIN_SHARE     below this there is not enough warm content to read.
+#   SKIN_SPREAD_LIMIT  one face under one light is a tight population. A gap
+#                      wider than this between the halves of the warm
+#                      distribution means more than one thing is being
+#                      measured -- a face and a wooden wall, most often -- and
+#                      no single skin figure describes both.
+SKIN_MIN_SHARE = 0.02
+SKIN_SPREAD_LIMIT = 15.0
+
+RAW_SUFFIXES = {".arw", ".cr2", ".cr3", ".nef", ".raf", ".dng", ".rw2", ".orf"}
+
 ZONES = 9
 
 
@@ -144,9 +156,23 @@ def load_rgb(path, max_pixels=1_000_000, seed=0):
     blue stripes average to magenta. So an oversized image is subsampled by
     drawing pixels at random, seeded so the result is reproducible.
     """
-    from PIL import Image
-    im = Image.open(path).convert("RGB")
-    a = np.asarray(im, dtype=np.float64).reshape(-1, 3) / 255.0
+    from pathlib import Path
+    p = Path(path)
+    if p.suffix.lower() in RAW_SUFFIXES:
+        # As Shot white balance applied, matching crs-render.py exactly. That
+        # is the state Lightroom opens the file in, and every slider value
+        # this skill emits is relative to it, so a cast measured here is the
+        # residual the user actually sees rather than the sensor's raw
+        # imbalance -- which is dominated by the illuminant, not the camera.
+        import rawpy
+        with rawpy.imread(str(p)) as raw:
+            rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True,
+                                  output_bps=16, use_camera_wb=True)
+        a = linear_to_srgb(rgb.astype(np.float64) / 65535.0).reshape(-1, 3)
+    else:
+        from PIL import Image
+        im = Image.open(path).convert("RGB")
+        a = np.asarray(im, dtype=np.float64).reshape(-1, 3) / 255.0
     if a.shape[0] > max_pixels:
         idx = np.random.default_rng(seed).choice(a.shape[0], max_pixels, replace=False)
         a = a[idx]
@@ -317,3 +343,94 @@ def ita(L, b):
     The published skin-tone metric (Chardon et al.). Higher is lighter.
     """
     return float(np.degrees(np.arctan2(np.asarray(L) - 50.0, np.asarray(b))))
+
+
+# Published ITA classification (Del Bino & Bernerd), used only to name the
+# number this module measures. The boundaries are theirs, not ours.
+ITA_CLASSES = [(55.0, "very light"), (41.0, "light"), (28.0, "intermediate"),
+               (10.0, "tan"), (-30.0, "brown")]
+
+
+def ita_class(angle):
+    for edge, name in ITA_CLASSES:
+        if angle > edge:
+            return name
+    return "dark"
+
+
+def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT):
+    """Skin tone of the warm population in this frame, or a refusal and why.
+
+    There is no face detector here, so nothing in this module can say which
+    pixels are a face. What it can say is whether the frame contains ONE warm
+    population tight enough that a single skin reading would mean something.
+    A portrait against a wooden wall contains two, and terracotta, sand and
+    bare wood all sit where skin sits; in those frames this returns a refusal
+    rather than a number, and the caller should look at the picture instead.
+
+    Only run this where the Subject gate has already settled on a portrait.
+    Nothing below can tell a face from a sand dune.
+    """
+    lab = rgb_to_lab(rgb)
+    L, a, b = lab[..., 0], lab[..., 1], lab[..., 2]
+    # All six published ITA classes sit at positive a* and positive b*: skin
+    # is warm. This admits wood and sand too, which is why the tests below it
+    # matter more than the test above it.
+    warm = (a > 0) & (b > 0) & (L >= L_FLOOR) & (chroma(lab) >= CHROMA_FLOOR)
+    share = float(np.count_nonzero(warm)) / rgb.shape[0]
+    if share < min_share:
+        return {"ok": False, "share": share,
+                "reason": f"warm content is {share * 100:.1f}% of the frame — "
+                          "too little to read a skin tone from"}
+    h = np.degrees(np.arctan2(b[warm], a[warm]))
+    # Split at the median and compare the halves. One face under one light is
+    # a single tight population; a face plus a wooden wall is two, and the gap
+    # between the halves is what shows it.
+    med = float(np.median(h))
+    lo, hi = h[h <= med], h[h > med]
+    gap = abs(float(hi.mean()) - float(lo.mean())) if lo.size and hi.size else 0.0
+    if gap > spread_limit:
+        return {"ok": False, "share": share, "spread": gap,
+                "reason": f"two warm populations {gap:.0f} deg apart (spread "
+                          f"limit {spread_limit:.0f} deg) — cannot tell skin "
+                          "from surround by colour alone"}
+    mL, mb = float(L[warm].mean()), float(b[warm].mean())
+    angle = ita(mL, mb)
+    return {"ok": True, "share": share, "spread": gap, "ita": angle,
+            "ita_class": ita_class(angle), "L": mL,
+            "a": float(a[warm].mean()), "b": mb}
+
+
+def probe_tint(crs, lin, step=10.0, rounds=5, settle=0.05):
+    """Tint units that undo this file's measured a* cast, measured off THIS file.
+
+    Adobe publishes no mapping from CIELAB chroma to a Tint unit, so none is
+    assumed. The renderer is asked instead: move Tint by a known step, see how
+    far a* actually travels on this image, and invert that.
+
+    One step is not enough. Tint acts as channel gains, so its effect on a* is
+    not linear across the range, and a single secant lands roughly two thirds
+    of the way. So the probe repeats from the accumulated value until the
+    residual settles, always rendering from the original file rather than
+    stacking renders, since the renderer's moves do not compose.
+
+    The answer is our renderer's Tint, not Adobe's, and it is only as good as
+    crs-render.py -- which models Tint as channel gains around the file's own
+    white balance and says plainly that it approximates Camera Raw rather than
+    reproducing it.
+    """
+    def cast_at(t):
+        x = crs.render(lin, {"IncrementalTint": t}) if t else lin
+        c = measure_cast(crs.linear_to_srgb(x).reshape(-1, 3))
+        return None if c is None else c["a"]
+
+    total = 0.0
+    for _ in range(rounds):
+        base = cast_at(total)
+        if base is None or abs(base) < settle:
+            break
+        moved = cast_at(total + step)
+        if moved is None or abs(moved - base) < 1e-9:
+            break
+        total += -base * step / (moved - base)
+    return total
