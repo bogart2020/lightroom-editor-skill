@@ -463,9 +463,10 @@ def layer4_look():
     print("\nLAYER 4 — look gate (reference-vs-preset)")
     try:
         import PIL  # noqa: F401
+        import numpy  # noqa: F401
     except ImportError:
-        skip("look gate (7 checks)",
-             "Pillow not installed — pip install -r tests/requirements.txt")
+        skip("look gate (11 checks)",
+             "Pillow/numpy not installed — pip install -r tests/requirements.txt")
         return
     with tempfile.TemporaryDirectory() as d:
         ref = Path(d) / "ref.png"

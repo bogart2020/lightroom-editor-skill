@@ -215,6 +215,17 @@ def hue_range(rgb, lo_pct=10.0, hi_pct=90.0):
             (pick(hi_pct) + m - 180.0) % 360.0)
 
 
+def frame_hue_mean(rgb):
+    """This frame's own dominant hue, in RGB-wheel degrees, or None.
+
+    Used to tell whether a set of reference frames is one look or several:
+    frames from different shoots average into a range that describes none of
+    them.
+    """
+    c, h = _coloured(rgb)
+    return hue_mean(h, c) if c.size else None
+
+
 def measure_cast(rgb, min_share=NEUTRAL_MIN_SHARE):
     """The colour of the things in this frame that ought to be grey.
 

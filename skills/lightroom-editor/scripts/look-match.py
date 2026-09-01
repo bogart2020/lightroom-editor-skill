@@ -25,77 +25,50 @@ Usage:
   scripts/look-match.py REFERENCE.jpg [MORE.jpg ...] PRESET.xmp
   scripts/look-match.py --warmer 8 REF.jpg PRESET.xmp
 """
-import collections, colorsys, math, os, re, sys, xml.etree.ElementTree as ET
-from PIL import Image
+import collections, os, re, sys, xml.etree.ElementTree as ET
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lookstats as ls
 
 CRS = "http://ns.adobe.com/camera-raw-settings/1.0/"
-BANDS = [("Red", 0), ("Orange", 30), ("Yellow", 60), ("Green", 120),
-         ("Aqua", 180), ("Blue", 240), ("Purple", 270), ("Magenta", 300)]
+BANDS = ls.BANDS
+
+# Band shares changed meaning underneath these two. Under the old HSV-
+# saturation weighting a share meant "how much of the frame's saturation sits
+# here"; under chroma weighting it means "how much of the frame's colour sits
+# here". The values are UNCHANGED because the eleven behaviours in
+# tests/test_skill.py — the contract — all still hold at 25 and 5.
+#
+# What that does not prove: those eleven checks run against single-hue
+# synthetic references, where one band carries nearly everything and neither
+# threshold is anywhere near its edge. On a real photograph, with colour spread
+# across several bands, these are the two numbers most likely to want moving.
+# Verify them against real references before trusting them there.
 DOMINANT = 25.0     # a band carrying >= this much of the colour must be addressed
 NEGLIGIBLE = 5.0    # a band carrying <= this much should not be pushed hard
+
+# Unchanged, and deliberately so: both are angles on the RGB wheel, compared
+# against crs: hue attributes which are angles on the same wheel. The unit did
+# not move, so the number does not either.
 HARD = 20           # |value| above this counts as a hard push
 SPREAD_LIMIT = 12   # max degrees the reference frames' means may differ by
 TOLERANCE = 3       # degrees a grading hue may sit outside the range
 
 
-def _hue_samples(path):
-    im = Image.open(path).convert("RGB").resize((200, 200))
-    out = []
-    for r, g, b in im.getdata():
-        h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-        if s < 0.10 or v < 0.10:
-            continue
-        out.append((h * 360, s))
-    return out
-
-
-def _pct_range(samples):
-    """Saturation-weighted 10th-90th percentile of hue, in degrees."""
-    if not samples:
-        return None
-    samples = sorted(samples)
-    tot = sum(s for _, s in samples)
-    lo = hi = samples[0][0]
-    acc = 0.0
-    for deg, s in samples:
-        acc += s
-        if acc <= 0.10 * tot:
-            lo = deg
-        if acc <= 0.90 * tot:
-            hi = deg
-    return lo, hi
-
-
-def _mean(samples):
-    x = sum(s * math.cos(math.radians(d)) for d, s in samples)
-    y = sum(s * math.sin(math.radians(d)) for d, s in samples)
-    return math.degrees(math.atan2(y, x)) % 360
+def band_profile(path):
+    """Share of the reference's colour carried by each Color Mix band."""
+    return ls.band_profile(ls.load_rgb(path))
 
 
 def hue_range(paths):
     """Measured range, plus per-frame means so a mixed set can be refused."""
-    per = [(p, _hue_samples(p)) for p in paths]
-    per = [(p, s) for p, s in per if s]
-    if not per:
-        return None, []
-    means = [(os.path.basename(p), _mean(s)) for p, s in per]
-    allsamples = [x for _, s in per for x in s]
-    return _pct_range(allsamples), means
-
-
-def band_profile(path):
-    im = Image.open(path).convert("RGB").resize((200, 200))
-    w = collections.Counter()
-    total = 0.0
-    for r, g, b in im.getdata():
-        h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-        if s < 0.10 or v < 0.10:      # near-neutral and near-black carry no hue
-            continue
-        deg = h * 360
-        name = min(BANDS, key=lambda t: min(abs(deg - t[1]), 360 - abs(deg - t[1])))[0]
-        w[name] += s
-        total += s
-    return {n: (100 * w[n] / total if total else 0.0) for n, _ in BANDS}
+    per = [(p, ls.load_rgb(p)) for p in paths]
+    means = [(os.path.basename(p), m) for p, rgb in per
+             if (m := ls.frame_hue_mean(rgb)) is not None]
+    stacked = np.concatenate([rgb for _, rgb in per], axis=0)
+    return ls.hue_range(stacked), means
 
 
 def preset_moves(path):
