@@ -77,12 +77,20 @@ def report(path, as_source=False, portrait=False, profile=None):
                 print("  Tint                not probed — crs-render.py is not installed")
             else:
                 lin, depth = crs.load_image(path)
-                tint = ls.probe_tint(crs, lin)
-                print(f"  Tint                {tint:+.0f}")
+                pr = ls.probe_tint(crs, lin)
+                sens = pr["sensitivity"]
+                print(f"  Tint                {pr['tint']:+.0f}"
+                      f"   (sensitivity {sens:.3f} a* per unit)" if sens
+                      else f"  Tint                {pr['tint']:+.0f}")
                 print("                      probed on THIS file with crs-render.py:")
                 print("                      Tint was moved a known step and the a*")
                 print("                      shift measured, then inverted. This is")
                 print("                      our renderer's Tint, not Adobe's.")
+                print("                      A lean that needs a large Tint to remove is")
+                print("                      often the subject's own colour rather than a")
+                print("                      cast -- a wall of cyan glass reads exactly like")
+                print("                      a green camera. Nothing here can tell those")
+                print("                      apart. Look at the picture before typing it.")
         print()
 
     prof = ls.band_profile(rgb)

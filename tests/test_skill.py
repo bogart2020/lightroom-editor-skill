@@ -1009,7 +1009,7 @@ def layer6_lookstats():
         solid(p, 55.0, -3.0, 0.0)
         lin, _ = crs.load_image(p)
         before = ls.measure_cast(crs.linear_to_srgb(lin).reshape(-1, 3))
-        tint = ls.probe_tint(crs, lin)
+        tint = ls.probe_tint(crs, lin)["tint"]
         after = ls.measure_cast(
             crs.linear_to_srgb(crs.render(lin, {"IncrementalTint": tint}))
             .reshape(-1, 3))
@@ -1066,6 +1066,52 @@ def layer7_analyze():
               out.strip()[-400:])
 
 
+# ---------------------------------------------------------------- layer 8
+def layer8_raw():
+    """The RAW decode path. Needs a RAW file, which the repo does not carry.
+
+        LIGHTROOM_TEST_RAW=/path/to/file.arw python tests/test_skill.py
+
+    Without one this SKIPS loudly rather than passing, because an untested
+    decode path that reports green is worse than one nobody claimed to have
+    tested.
+    """
+    print("\nLAYER 8 — RAW decode path")
+    raw = os.environ.get("LIGHTROOM_TEST_RAW", "")
+    if not raw or not Path(raw).exists():
+        skip("RAW decode path (2 checks)",
+             "set LIGHTROOM_TEST_RAW=/path/to/file.arw to run these; "
+             "the repo carries no RAW file to test with")
+        return
+    try:
+        import numpy as np
+        import rawpy  # noqa: F401
+    except ImportError:
+        skip("RAW decode path (2 checks)", "numpy/rawpy not installed")
+        return
+    ls = load_lookstats()
+    spec = importlib.util.spec_from_file_location("crs_render", SCRIPTS / "crs-render.py")
+    crs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(crs)
+
+    rgb = ls.load_rgb(raw, max_pixels=10 ** 9)
+    check("a RAW file decodes to finite sRGB in range",
+          np.isfinite(rgb).all() and rgb.min() >= 0.0 and rgb.max() <= 1.0,
+          f"got range [{rgb.min()}, {rgb.max()}], finite={np.isfinite(rgb).all()}")
+
+    # THE invariant. Both scripts must open a RAW in the same state -- As Shot
+    # white balance applied -- or a cast measured by one is corrected against
+    # a different image by the other, and every Tint the probe derives is
+    # measured in the wrong place.
+    lin, _ = crs.load_image(raw)
+    theirs = crs.linear_to_srgb(lin).reshape(-1, 3)
+    worst = float(np.abs(rgb - theirs).max()) if rgb.shape == theirs.shape else float("inf")
+    check("lookstats and crs-render decode a RAW identically",
+          worst == 0.0,
+          f"decodes differ by up to {worst}; the two scripts are looking at "
+          "different images and no probed Tint means anything")
+
+
 def main():
     if "--pre-fix" in sys.argv:
         layer1_document(pre_fix=True)
@@ -1077,6 +1123,7 @@ def main():
         layer5_render()
         layer6_lookstats()
         layer7_analyze()
+        layer8_raw()
     passed = sum(1 for _, ok, _ in results if ok)
     total = len(results)
     tail = f"  ({len(skipped)} skipped)" if skipped else ""
