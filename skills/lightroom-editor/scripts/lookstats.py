@@ -414,6 +414,20 @@ def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT):
 
     Only run this where the Subject gate has already settled on a portrait.
     Nothing below can tell a face from a sand dune.
+
+    KNOWN FALSE POSITIVE, unfixed on purpose. On a gold-toned frame with no
+    skin in it at all, 2.37% of pixels sat at a*>0 -- edge and noise pixels,
+    while the frame's mean a* was -2.50 -- and that sliver cleared both
+    refusals: it was above SKIN_MIN_SHARE (2%) and tight enough in hue (2.2
+    deg) to look like one population. It reported ITA -40.9, which is
+    nonsense. A tiny coherent population is indistinguishable from a small
+    face by these tests.
+
+    The fix is a higher SKIN_MIN_SHARE, but the right value cannot be chosen
+    without real portraits to calibrate against -- an environmental portrait
+    has a genuinely small face, so raising it blindly trades a false positive
+    for a false negative. Until then: read the share, and read it against the
+    picture. A single-digit share is a reason to distrust the figure.
     """
     lab = rgb_to_lab(rgb)
     L, a, b = lab[..., 0], lab[..., 1], lab[..., 2]
