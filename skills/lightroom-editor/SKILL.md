@@ -122,7 +122,15 @@ forced, one line each, each marked `assumed`.
 
 Then, before any slider, a short verdict the user can disagree with:
 
-- **Source character** — what this file's origin does to it, from `references/07-sources.md`.
+- **Source character** — what this file's origin does to it. With a code
+  environment, `scripts/look-analyze.py --source FILE` measures it off the
+  photograph in front of you rather than assuming it: it reports the cast in
+  CIELAB, and the Tint that undoes it, probed on this file. Where the frame
+  holds too little near-neutral content to read — a forest, a sunset, anything
+  without something that ought to be grey — it prints `WITHHELD` with the
+  reason and no number, and `references/07-sources.md` fills in as the
+  fallback. Say which one you used: a profile figure is **unmeasured**, and
+  reporting it as measured is the failure this whole step exists to prevent.
 - **Headroom** — how much recovery latitude exists. A true Bayer raw has a lot. Apple ProRAW and Pixel DNG have far less, because the tone mapping already spent it. An 8-bit JPEG has almost none and bands when pushed.
 - **What is actually wrong** — read from the image if you have it, from the description if not.
 
@@ -146,10 +154,24 @@ Reach for a mask the moment a global move helps one region and hurts another —
 
 Runs only when the user wants one. `references/08-looks.md` covers all four routes: decomposing a reference image into slider moves, film emulation, modern digital looks, and genre baselines.
 
+Where a reference image exists and there is a code environment, decompose it by
+measurement before reasoning about it: `scripts/look-analyze.py REFERENCE.jpg`
+gives the band shares, the hue range in RGB-wheel degrees, the per-zone cast
+and the black point. Read the numbers and choose the sliders yourself — the
+script deliberately does not. The hue range it prints is the same range Step 5
+will hold the preset's Color Grading hues against, so a grade chosen outside it
+is a failure you can see coming.
+
 ## Step 5 — Verify
 
 A gate on Step 6, not a footnote. A recipe that has not been through it is
 delivered marked **unverified**, and says why.
+
+Both the gate and the analysis measure through one module,
+`scripts/lookstats.py`, so the report and the gate can never disagree about
+what colour the reference is. Its figures are CIE L*a*b* for anything
+perceptual and RGB-wheel degrees for anything compared against a `crs:` hue
+value, which is the wheel those attributes use.
 
 Run `scripts/look-match.py` first wherever a reference exists — it needs only
 the reference and the `.xmp`, costs milliseconds, works with no source photo,

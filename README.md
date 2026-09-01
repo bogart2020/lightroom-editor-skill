@@ -35,6 +35,28 @@ Adobe Color profile throughout.
 
 Deep profiles for **Apple ProRAW**, **Sony ARW**, **Canon CR2/CR3**, **Nikon NEF**, **Fujifilm RAF**, **Google Pixel DNG**, and **smartphone HEIC/JPEG** — plus a diagnosis method that handles anything not on the list, including cameras that don't exist yet.
 
+## What it measures
+
+Colour is measured, not estimated. `scripts/look-analyze.py` reads a reference
+image — or your own file with `--source` — and reports the band shares, the hue
+range, the per-zone cast, the black point, and on portraits the skin tone as a
+published ITA angle. `scripts/look-match.py` holds a preset against the same
+measurements. Both go through one module, so the report and the gate can never
+disagree about what colour something is.
+
+Everything perceptual is CIE L\*a\*b\*. Anything compared against a `crs:` hue
+value stays in RGB-wheel degrees, because that is the wheel those attributes
+use. There is no model and no training data — it is colour science, in numpy,
+and every threshold is either derived from a stated definition or labelled in
+the source as a judgement call.
+
+**It refuses rather than guesses.** A frame with no near-neutral content has no
+readable cast, so it prints `WITHHELD` and the reason and falls back to the
+camera profile, labelled unmeasured. A forest is not a green cast. A face
+against a wooden wall is two warm populations, not one skin tone. A withheld
+figure is counted in the verdict line so it can never be read as a measured
+one.
+
 ## Install
 
 ### As a plugin (recommended — Claude Code and Claude Desktop)
@@ -96,6 +118,8 @@ skills/lightroom-editor/
    └─ 11-intake.md         look-word decompositions, Intent-vs-source conflicts
   scripts/
    ├─ preset-check.py      validates a generated .xmp before it reaches Lightroom
+   ├─ lookstats.py         the measurement core — one implementation of colour
+   ├─ look-analyze.py      measures a reference or your own file, and reports
    ├─ look-match.py        does the preset grade the colour the reference has?
    ├─ crs-render.py        renders the modellable sliders onto a photo
    ├─ crs-vocabulary.txt   the crs: attribute names Lightroom actually accepts
