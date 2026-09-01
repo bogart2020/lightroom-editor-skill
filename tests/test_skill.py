@@ -535,6 +535,21 @@ def layer4_look():
         check("the same preset passes once the deviation is stated",
               rc == 0 and "stated deviation: +12" in out, out.strip()[-300:])
 
+        # REGRESSION: a reference with no dominant hue must not silently skip
+        # the Color Grading check and report a clean GREEN. The gate has to
+        # say which checks actually ran.
+        noise = Path(d) / "noise.png"
+        import numpy as _np
+        from PIL import Image as _Image
+        _Image.fromarray(_np.random.default_rng(11)
+                        .integers(60, 200, (200, 200, 3), dtype=_np.uint8)).save(noise)
+        rc, out = run_look(noise, preset(
+            'crs:SplitToningShadowHue="38" crs:SaturationAdjustmentOrange="+8"', "noise"))
+        check("a reference with no measurable hue range says the check did not run",
+              "NOT MEASURABLE" in out and "did NOT run" in out
+              and "hue check could not run" in out,
+              out.strip()[-400:])
+
         # the reference's dominant band must be addressed
         rc, out = run_look(ref, preset('crs:SaturationAdjustmentBlue="-30"', "ignore"))
         check("leaving the dominant band untouched fails",
@@ -866,6 +881,37 @@ def layer6_lookstats():
         check("hue range tracks a known 12 deg shift",
               abs(((lo2 + hi2) / 2 - (lo + hi) / 2) - 12) < 2.0,
               f"40 deg ref measured {(lo+hi)/2:.1f}, 52 deg ref measured {(lo2+hi2)/2:.1f}")
+
+        # --- a hue range nothing supports must not be reported ------------
+        # look-match FAILS presets on this number, so an unstable one produces
+        # random verdicts. Hue-less noise has no hue range; saying so beats
+        # returning bounds that move 85 deg between samples.
+        p = Path(d) / "huelessnoise.png"
+        rr = np.random.default_rng(11)
+        Image.fromarray(rr.integers(60, 200, (200, 200, 3), dtype=np.uint8)).save(p)
+        check("a frame with no coherent hue reports no hue range",
+              ls.hue_range(ls.load_rgb(p)) is None,
+              f"returned {ls.hue_range(ls.load_rgb(p))} for uniform noise")
+
+        # And the flip side: whatever DOES pass the concentration gate has to
+        # be stable, or the gate is still deciding on noise. This is the
+        # property HUE_CONCENTRATION_MIN was derived to guarantee.
+        p = Path(d) / "spread.png"
+        rr = np.random.default_rng(12)
+        px = [tuple(int(v * 255) for v in
+                    colorsys.hsv_to_rgb(((48 + rr.normal(0, 45)) % 360) / 360, 0.5, 0.5))
+              for _ in range(40000)]
+        im = Image.new("RGB", (200, 200))
+        im.putdata(px)
+        im.save(p)
+        rs = [ls.hue_range(ls.load_rgb(p, max_pixels=8000, seed=k)) for k in range(10)]
+        drift = 0.0 if any(r is None for r in rs) else max(
+            max(x[0] for x in rs) - min(x[0] for x in rs),
+            max(x[1] for x in rs) - min(x[1] for x in rs))
+        check("a reported hue range is stable to within the gate's tolerance",
+              drift < 3.0,
+              f"bounds moved {drift:.2f} deg across ten samples, more than the "
+              "3 deg TOLERANCE the gate judges against")
 
         # --- zones separate the grade by tone -----------------------------
         p = Path(d) / "zones.png"

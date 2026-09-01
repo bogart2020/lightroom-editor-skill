@@ -75,6 +75,28 @@ NEUTRAL_MIN_SHARE = 0.02
 SKIN_MIN_SHARE = 0.02
 SKIN_SPREAD_LIMIT = 15.0
 
+# DERIVED, by measurement, against the gate's own tolerance.
+#
+# hue_range's bounds are what look-match.py FAILS presets on, so bounds that
+# move between samples produce random verdicts. How far they move depends on
+# how concentrated the frame's hue is -- the chroma-weighted circular resultant
+# length R, which is 1.0 for a single hue and 0.0 for hue spread evenly round
+# the wheel.
+#
+# Measured: ten independent samples of the same frame at a range of hue
+# spreads, comparing the drift in the reported bounds against look-match's
+# TOLERANCE of 3 degrees.
+#
+#     R 0.99  drift 0.00 deg      R 0.56  drift  3.75 deg
+#     R 0.94  drift 0.94 deg      R 0.37  drift  4.69 deg
+#     R 0.87  drift 0.94 deg      R 0.08  drift 12.19 deg
+#     R 0.72  drift 2.81 deg      R 0.03  drift 58.12 deg
+#
+# The crossover sits between 0.56 and 0.72. This takes the conservative end:
+# the lowest concentration actually proven stable. Below it hue_range returns
+# None and the hue check is skipped rather than decided on noise.
+HUE_CONCENTRATION_MIN = 0.72
+
 RAW_SUFFIXES = {".arw", ".cr2", ".cr3", ".nef", ".raf", ".dng", ".rw2", ".orf"}
 
 ZONES = 9
@@ -220,16 +242,38 @@ def _coloured(rgb):
     return c[keep], h[keep]
 
 
-def hue_range(rgb, lo_pct=10.0, hi_pct=90.0):
+def hue_concentration(rgb):
+    """How concentrated this frame's hue is: 1.0 one hue, 0.0 spread evenly.
+
+    The chroma-weighted circular resultant length. It answers whether "the
+    hue of this image" is a thing that exists before anything tries to
+    measure it.
+    """
+    c, h = _coloured(rgb)
+    if c.size == 0:
+        return 0.0
+    x = float((c * np.cos(np.radians(h))).sum())
+    y = float((c * np.sin(np.radians(h))).sum())
+    return float(np.hypot(x, y) / c.sum())
+
+
+def hue_range(rgb, lo_pct=10.0, hi_pct=90.0, min_concentration=HUE_CONCENTRATION_MIN):
     """Chroma-weighted 10th-90th percentile of hue, in RGB-wheel degrees.
 
     The distribution is rotated so its circular mean sits at 180 before the
     percentiles are taken, then rotated back. Without that, a red reference
     spanning 350-10 degrees would be split across the wrap and measured as
     covering the entire wheel.
+
+    Returns None when the frame's hue is too spread out for a range to mean
+    anything. The bounds this returns are what look-match.py fails presets on,
+    and on a frame with no dominant hue they move by tens of degrees depending
+    on which pixels are sampled -- so the honest answer there is that this
+    image does not have a hue range, not a pair of numbers that will not
+    reproduce.
     """
     c, h = _coloured(rgb)
-    if c.size == 0:
+    if c.size == 0 or hue_concentration(rgb) < min_concentration:
         return None
     m = hue_mean(h, c)
     rel = (h - m + 180.0) % 360.0

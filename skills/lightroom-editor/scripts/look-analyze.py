@@ -93,8 +93,11 @@ def report(path, as_source=False, portrait=False, profile=None):
     rng = ls.hue_range(rgb)
     if rng is None:
         withheld.append("hue range")
-        print("\n  hue range           WITHHELD — nothing in this frame carries "
-              "enough colour to measure a hue from")
+        print(f"\n  hue range           WITHHELD — this frame's colour is spread too")
+        print(f"                      evenly round the wheel (concentration below")
+        print(f"                      {ls.HUE_CONCENTRATION_MIN}) for a range to mean anything, or")
+        print(f"                      nothing in it carries enough colour at all.")
+        print(f"                      look-match.py cannot run its hue check here.")
     else:
         lo, hi = rng
         print(f"\n  hue range (10th-90th pct)   {lo:.0f}-{hi:.0f}°   on the RGB wheel,")

@@ -151,6 +151,15 @@ def main():
                          f"(limit {SPREAD_LIMIT}°) — these frames are not one look. "
                          "Averaging them produces a range that describes none of "
                          "them. Pin a single primary reference instead.")
+    if rng is None:
+        # Not a pass. The reference's hue is too spread out for a range to be
+        # measured, so the Color Grading check below cannot run at all. Saying
+        # so beats deciding it on bounds that would not reproduce.
+        print(f"\n  reference hue range: NOT MEASURABLE — this reference's colour "
+              f"is spread\n  too evenly round the wheel (concentration below "
+              f"{ls.HUE_CONCENTRATION_MIN}) for a range\n  to mean anything. The "
+              f"Color Grading hue check did NOT run; the band\n  checks above did. "
+              f"Pin a reference with a dominant colour to close it.")
     if rng:
         lo, hi = rng
         lo, hi = lo + shift, hi + shift
@@ -184,8 +193,9 @@ def main():
     for w in warns:
         print(f"    warn: {w}")
     print()
-    print("RED — the preset grades colour the reference does not have" if fails
-          else "GREEN — preset moves line up with the reference")
+    partial = "" if rng else " (bands only — the hue check could not run)"
+    print(f"RED — the preset grades colour the reference does not have{partial}" if fails
+          else f"GREEN — preset moves line up with the reference{partial}")
     return 1 if fails else 0
 
 
