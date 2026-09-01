@@ -402,7 +402,8 @@ def ita_class(angle):
     return "dark"
 
 
-def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT):
+def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT,
+         allow_unreliable=False):
     """Skin tone of the warm population in this frame, or a refusal and why.
 
     There is no face detector here, so nothing in this module can say which
@@ -415,19 +416,21 @@ def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT):
     Only run this where the Subject gate has already settled on a portrait.
     Nothing below can tell a face from a sand dune.
 
-    KNOWN FALSE POSITIVE, unfixed on purpose. On a gold-toned frame with no
-    skin in it at all, 2.37% of pixels sat at a*>0 -- edge and noise pixels,
-    while the frame's mean a* was -2.50 -- and that sliver cleared both
-    refusals: it was above SKIN_MIN_SHARE (2%) and tight enough in hue (2.2
-    deg) to look like one population. It reported ITA -40.9, which is
-    nonsense. A tiny coherent population is indistinguishable from a small
-    face by these tests.
+    WITHHELD BY DEFAULT, on evidence. Measured against a set of warm-graded
+    press photographs of a visibly light-skinned subject -- published ITA for
+    that is roughly +41 to +55 -- this returned -3 to -64 degrees, "brown" or
+    "dark", on six of eight frames, and reported them as fact.
 
-    The fix is a higher SKIN_MIN_SHARE, but the right value cannot be chosen
-    without real portraits to calibrate against -- an environmental portrait
-    has a genuinely small face, so raising it blindly trades a false positive
-    for a false negative. Until then: read the share, and read it against the
-    picture. A single-digit share is a reason to distrust the figure.
+    The failure is structural, not a threshold that needs tuning. On a
+    warm-graded photograph the whole scene satisfies a*>0 and b*>0, so the
+    "warm population" was 45-95% of the frame: the porch light, not the face.
+    No share or spread limit separates those, because there is nothing to
+    separate -- the image really is all one warm population.
+
+    So the default is a refusal that names the reason. Pass allow_unreliable
+    to get the measurement anyway; it is kept because it is correct once
+    something else has established which pixels are skin, which is a face
+    detector's job and not this module's.
     """
     lab = rgb_to_lab(rgb)
     L, a, b = lab[..., 0], lab[..., 1], lab[..., 2]
@@ -436,6 +439,12 @@ def skin(rgb, min_share=SKIN_MIN_SHARE, spread_limit=SKIN_SPREAD_LIMIT):
     # matter more than the test above it.
     warm = (a > 0) & (b > 0) & (L >= L_FLOOR) & (chroma(lab) >= CHROMA_FLOOR)
     share = float(np.count_nonzero(warm)) / rgb.shape[0]
+    if not allow_unreliable:
+        return {"ok": False, "share": share,
+                "reason": f"colour alone cannot locate a face; the warm "
+                          f"population here is {share * 100:.0f}% of the frame. "
+                          "On a warm-graded photograph that is the scene, not "
+                          "the skin. Read skin tone off the picture instead."}
     if share < min_share:
         return {"ok": False, "share": share,
                 "reason": f"warm content is {share * 100:.1f}% of the frame — "

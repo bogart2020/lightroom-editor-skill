@@ -969,9 +969,15 @@ def layer6_lookstats():
         # --- skin: one warm population reads, two refuse ------------------
         p = Path(d) / "skin.png"
         solid(p, 65.0, 12.0, 18.0)
-        got = ls.skin(ls.load_rgb(p))
         want_ita = ls.ita(65.0, 18.0)
-        check("skin tone is measured from a single warm population",
+        # Withheld by default: on real warm-graded frames this reported a
+        # flatly wrong tone as fact on six of eight images.
+        check("skin tone is withheld by default and says why",
+              not ls.skin(ls.load_rgb(p))["ok"]
+              and "colour alone cannot locate a face" in ls.skin(ls.load_rgb(p))["reason"],
+              f"{ls.skin(ls.load_rgb(p))}")
+        got = ls.skin(ls.load_rgb(p), allow_unreliable=True)
+        check("the underlying measurement is still correct when opted into",
               got["ok"] and abs(got["ita"] - want_ita) < 1.5,
               f"measured {got}, built from L=65 b=18 (ITA {want_ita:.1f})")
 
@@ -984,7 +990,7 @@ def layer6_lookstats():
         arr = np.zeros((200, 200, 3), dtype=np.uint8)
         arr[:100], arr[100:] = face, wood
         Image.fromarray(arr).save(p)
-        got = ls.skin(ls.load_rgb(p))
+        got = ls.skin(ls.load_rgb(p), allow_unreliable=True)
         check("skin measurement refuses two separated warm populations",
               not got["ok"] and "spread" in got["reason"],
               f"returned {got} — a face and a wooden wall cannot be told apart "
