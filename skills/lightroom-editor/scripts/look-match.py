@@ -41,11 +41,33 @@ BANDS = ls.BANDS
 # here". The values are UNCHANGED because the eleven behaviours in
 # tests/test_skill.py — the contract — all still hold at 25 and 5.
 #
-# What that does not prove: those eleven checks run against single-hue
-# synthetic references, where one band carries nearly everything and neither
-# threshold is anywhere near its edge. On a real photograph, with colour spread
-# across several bands, these are the two numbers most likely to want moving.
-# Verify them against real references before trusting them there.
+# CALIBRATED 2 Sep 2026 against 17 real frames — 11 Sony a6400 ARW and 6 iPhone
+# ProRAW — which is the check the note that stood here used to ask for. Both
+# numbers survived; what did not survive was the assumption that one of them
+# always has something to say.
+#
+# DOMINANT sits just under its empirical ceiling. Every one of the 17 frames
+# has a band clearing 25%, so the check always had something to test — but the
+# flattest frame's strongest band measured 25.9%, a margin of 0.9 points. At 26
+# that frame has no dominant band at all; at 30, two frames do not; at 40, four.
+# The threshold is NOT raised, because 25% is 2x an even eight-band split and
+# that is what makes it mean "dominant" rather than "biggest". It is also not
+# lowered: 20% is 1.6x even, which is not dominance, and it would demand a
+# preset touch 1.73 bands per frame instead of 1.27.
+#
+# The real finding was the failure mode at the edge. A reference where no band
+# clears DOMINANT used to produce a silent pass, and the output positively
+# asserted "the band checks above did [run]". That is now announced. The margin
+# is thin and the sample is 17 frames from two cameras, so expect a flat
+# reference to hit it — that case is now reported rather than mistaken for a
+# clean result.
+#
+# NEGLIGIBLE is UNCHANGED and, honestly, unvalidated. Across the 11 ARWs it
+# calls 42 of 88 bands negligible and leaves one frame with none, which is a
+# sane-looking spread — but "sane-looking" is not calibration. Moving it needs
+# reference/preset pairs with known-good and known-bad verdicts to score
+# against, and no such labelled set exists here. Photographs alone cannot
+# settle it. Left where it is, deliberately, rather than tuned against nothing.
 DOMINANT = 25.0     # a band carrying >= this much of the colour must be addressed
 NEGLIGIBLE = 5.0    # a band carrying <= this much should not be pushed hard
 
@@ -154,6 +176,21 @@ def main():
             fails.append(f"{name} carries {pct:.1f}% of the reference's colour "
                          "and the preset does not touch it")
 
+    # A reference flat enough that no band clears DOMINANT gets no opinion out
+    # of the check above: the loop appends nothing and the gate returns 0,
+    # which is indistinguishable from a preset that addressed everything it
+    # should have. Measured, not hypothetical -- see the calibration note on
+    # DOMINANT. Say it, exactly as the hue check below says it.
+    strongest = max(prof.items(), key=lambda kv: kv[1])
+    dominant_ran = strongest[1] >= DOMINANT
+    if not dominant_ran:
+        print(f"\n  dominant band: NONE — no band carries {DOMINANT:.0f}% of this "
+              f"reference's\n  colour; the strongest is {strongest[0]} at "
+              f"{strongest[1]:.1f}%. The check that a\n  dominant band must be "
+              f"addressed did NOT run, so a preset can leave\n  every band alone "
+              f"and still come back clean. Pin a reference with a\n  dominant "
+              f"colour to close it.")
+
     rng, centre, core, means = hue_range(refs)
     if len(means) > 1:
         spread = max(m for _, m in means) - min(m for _, m in means)
@@ -168,11 +205,15 @@ def main():
         # Not a pass. The reference's hue is too spread out for a range to be
         # measured, so the Color Grading check below cannot run at all. Saying
         # so beats deciding it on bounds that would not reproduce.
+        # Only claim the band checks ran when they did — and do not repeat the
+        # advice the dominant-band message above has already given.
+        also = ("the band\n  checks above did. Pin a reference with a dominant "
+                "colour to close it." if dominant_ran else
+                "and neither did\n  the dominant-band check above.")
         print(f"\n  reference hue range: NOT MEASURABLE — this reference's colour "
               f"is spread\n  too evenly round the wheel (concentration below "
               f"{ls.HUE_CONCENTRATION_MIN}) for a range\n  to mean anything. The "
-              f"Color Grading hue check did NOT run; the band\n  checks above did. "
-              f"Pin a reference with a dominant colour to close it.")
+              f"Color Grading hue check did NOT run; {also}")
     if rng:
         lo, hi = rng
         lo, hi = lo + shift, hi + shift
@@ -227,7 +268,11 @@ def main():
     for w in warns:
         print(f"    warn: {w}")
     print()
-    partial = "" if rng else " (bands only — the hue check could not run)"
+    # Name what actually ran. A green that does not say which checks were
+    # inoperative reads as a stronger result than it is.
+    didnt = ([] if rng else ["the hue check"]) + \
+            ([] if dominant_ran else ["the dominant-band check"])
+    partial = f" ({' and '.join(didnt)} could not run)" if didnt else ""
     print(f"RED — the preset grades colour the reference does not have{partial}" if fails
           else f"GREEN — preset moves line up with the reference{partial}")
     return 1 if fails else 0

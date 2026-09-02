@@ -443,6 +443,27 @@ def golden_ref(path, hue_deg=40):
     im.save(path)
 
 
+def flat_ref(path):
+    """A reference whose colour is spread right round the wheel.
+
+    No band clears DOMINANT here (the strongest measures ~19%). Real frames
+    get close to this: of eleven Sony ARWs measured, the flattest had a
+    strongest band of 25.9% — 0.9 points above the threshold. See the
+    calibration note in look-match.py.
+    """
+    from PIL import Image
+    import colorsys
+    im = Image.new("RGB", (64, 64))
+    px = []
+    for y in range(64):
+        for x in range(64):
+            h = ((x * 360 // 64) % 360) / 360
+            r, g, b = colorsys.hsv_to_rgb(h, 0.55, 0.35 + 0.5 * (y / 64))
+            px.append((int(r * 255), int(g * 255), int(b * 255)))
+    im.putdata(px)
+    im.save(path)
+
+
 def run_look(ref, preset):
     return run_look_flags([], ref, preset)
 
@@ -465,7 +486,7 @@ def layer4_look():
         import PIL  # noqa: F401
         import numpy  # noqa: F401
     except ImportError:
-        skip("look gate (11 checks)",
+        skip("look gate (17 checks)",
              "Pillow/numpy not installed — pip install -r tests/requirements.txt")
         return
     import colorsys as _colorsys
@@ -494,6 +515,29 @@ def layer4_look():
               rc == 1 and "outside the reference" in out, out.strip()[-300:])
         check("shadow-weighted Balance is reported",
               "weights it hardest" in out, out.strip()[-300:])
+
+        # A reference flat enough that NO band clears DOMINANT. The per-band
+        # loop then appends nothing and the gate returns 0 — indistinguishable
+        # from a preset that addressed everything it should have. The hue
+        # check twelve lines below already announces when it cannot run; this
+        # one must too, or a silent pass reads as a real one.
+        flat = Path(d) / "flat.png"
+        flat_ref(flat)
+        rc, out = run_look(flat, preset(
+            'crs:SaturationAdjustmentOrange="+8"', "flat"))
+        # Assert on band-check wording only. "did NOT run" alone would pass on
+        # the HUE check's message, which this same flat reference also trips —
+        # a green for the wrong reason.
+        check("a reference with no dominant band says so instead of passing quietly",
+              "dominant band: NONE" in out, out.strip()[-500:])
+        check("the unrunnable dominant check names the strongest band it found",
+              "strongest is Green" in out, out.strip()[-500:])
+        check("the verdict line admits the dominant-band check could not run",
+              "dominant-band check could not run" in out, out.strip()[-500:])
+        check("the verdict no longer claims the band checks ran",
+              "the band\n  checks above did" not in out, out.strip()[-500:])
+        check("an unrunnable dominant check is not itself a failure",
+              rc == 0, out.strip()[-500:])
 
         # REGRESSION: draining an absent band is how a look comes to lack it.
         rc, out = run_look(ref, preset(
@@ -579,10 +623,16 @@ def layer4_look():
                         .integers(60, 200, (200, 200, 3), dtype=_np.uint8)).save(noise)
         rc, out = run_look(noise, preset(
             'crs:SplitToningShadowHue="38" crs:SaturationAdjustmentOrange="+8"', "noise"))
+        # The verdict names every check that could not run. Random noise has no
+        # dominant band either, so it now names both — assert on the parts
+        # rather than one contiguous phrase, which the conjunction breaks.
+        verdict = out.strip().splitlines()[-1]
         check("a reference with no measurable hue range says the check did not run",
               "NOT MEASURABLE" in out and "did NOT run" in out
-              and "hue check could not run" in out,
+              and "hue check" in verdict and "could not run" in verdict,
               out.strip()[-400:])
+        check("noise also has no dominant band, and the verdict says that too",
+              "dominant-band check" in verdict, verdict)
 
         # the reference's dominant band must be addressed
         rc, out = run_look(ref, preset('crs:SaturationAdjustmentBlue="-30"', "ignore"))
