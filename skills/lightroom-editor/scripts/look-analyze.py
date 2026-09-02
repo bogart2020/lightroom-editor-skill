@@ -49,6 +49,17 @@ def load_crs():
     return mod
 
 
+def load_segment():
+    """segment.py, if it is installed beside us. Optional, like crs-render."""
+    p = HERE / "segment.py"
+    if not p.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("segment", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def report(path, as_source=False, portrait=False, profile=None):
     rgb, provenance = ls.load_source(path)
     preview = provenance == ls.PREVIEW
@@ -159,18 +170,39 @@ def report(path, as_source=False, portrait=False, profile=None):
               f"{z['a']:+8.1f}{z['b']:+8.1f}{z['share'] * 100:8.1f}%")
 
     if portrait:
-        s = ls.skin(rgb)
         print()
-        if s["ok"]:
+        # Try the segmenter first. It answers the one question colour cannot —
+        # which pixels are a face — and where it can, the reading is taken off
+        # the face instead of off the frame's warm content. Absent the model
+        # or its runtime, this falls straight back to the colour-only path,
+        # which withholds by default. See segment.py.
+        seg = load_segment()
+        s = seg.skin(path) if seg is not None else {"ok": False, "reason": "", "confidence": None}
+        if s.get("ok"):
             print(f"  skin tone           ITA {s['ita']:.1f}°  ({s['ita_class']})")
-            print(f"                      L {s['L']:.1f}  a {s['a']:+.1f}  b {s['b']:+.1f}"
-                  f"   over {s['share'] * 100:.1f}% of frame")
-            print("                      warm population only — nothing here can")
-            print("                      tell a face from wood or sand, so read it")
-            print("                      against the picture.")
-        else:
+            print(f"                      L {s['L']:.1f}  a {s['a']:+.1f}  b {s['b']:+.1f}")
+            print(f"                      measured on the segmented face — "
+                  f"{s['face_share'] * 100:.1f}% of frame,")
+            print(f"                      segmenter confidence {s['confidence']:.2f}. Not the")
+            print( "                      frame's warm content. Look at the picture:")
+            print( "                      a mask is not a judgement.")
+        elif s.get("confidence") is not None:
+            # The segmenter ran and declined. That is a stronger statement than
+            # the colour-only refusal, so it is the one worth printing.
             withheld.append("skin tone")
             print(f"  skin tone           WITHHELD — {s['reason']}")
+        else:
+            s = ls.skin(rgb)
+            if s["ok"]:
+                print(f"  skin tone           ITA {s['ita']:.1f}°  ({s['ita_class']})")
+                print(f"                      L {s['L']:.1f}  a {s['a']:+.1f}  b {s['b']:+.1f}"
+                      f"   over {s['share'] * 100:.1f}% of frame")
+                print("                      warm population only — nothing here can")
+                print("                      tell a face from wood or sand, so read it")
+                print("                      against the picture.")
+            else:
+                withheld.append("skin tone")
+                print(f"  skin tone           WITHHELD — {s['reason']}")
 
     print()
     if withheld:

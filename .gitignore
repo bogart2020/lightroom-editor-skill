@@ -9,6 +9,11 @@
 # Build output
 *.zip
 
+# Segmentation weights — 16 MB, fetched on demand by the user, never committed.
+# segment.py degrades to a refusal when they are absent, so the skill works
+# without them and CI runs without downloading anything.
+skills/lightroom-editor/scripts/models/
+
 # local leak-check denylist (personal identifiers)
 .leak-denylist
 __pycache__/

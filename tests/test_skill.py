@@ -1250,6 +1250,117 @@ def layer9_undecodable_raw():
           out.strip()[-400:])
 
 
+# --------------------------------------------------------------- layer 10
+def load_segment():
+    spec = importlib.util.spec_from_file_location("segment", SCRIPTS / "segment.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def layer10_segmentation():
+    """The face segmenter, which is optional and must stay optional.
+
+    Two halves. The first needs neither the runtime nor the weights and always
+    runs: absence must degrade to a refusal, and the model's output must be
+    softmaxed before anything calls it a confidence. The second needs real
+    photographs:
+
+        LIGHTROOM_TEST_PORTRAIT=/path/to/a/face.jpg
+        LIGHTROOM_TEST_NOFACE=/path/to/a/warm/scene/with/no/face.jpg
+    """
+    print("\nLAYER 10 — face segmentation (optional dependency)")
+    try:
+        import numpy as np
+        from PIL import Image  # noqa: F401
+    except ImportError:
+        skip("face segmentation (7 checks)", "numpy/Pillow not installed")
+        return
+    seg = load_segment()
+
+    # 1. Absence is a state, not a crash. This runs everywhere, including CI
+    #    where neither the runtime nor the weights exist.
+    import os as _os
+    old = _os.environ.get("LIGHTROOM_SEGMENT_MODEL")
+    _os.environ["LIGHTROOM_SEGMENT_MODEL"] = "/nonexistent/model.tflite"
+    try:
+        gone = load_segment()
+        ready, why = gone.available()
+        check("a missing model reports not-ready with a reason, and does not raise",
+              ready is False and len(why) > 20, f"ready={ready} why={why!r}")
+        # Either half can be the missing one — the runtime is checked first,
+        # so on a machine without ai-edge-litert that is what gets named. The
+        # contract is that it refuses and says what to install, not which of
+        # the two is absent.
+        r = gone.skin(str(REFS / "01-light.md"))     # never even opened
+        check("a missing model makes skin() refuse rather than throw",
+              r["ok"] is False
+              and any(w in r["reason"].lower() for w in ("model", "litert")),
+              repr(r)[:300])
+    finally:
+        if old is None:
+            _os.environ.pop("LIGHTROOM_SEGMENT_MODEL", None)
+        else:
+            _os.environ["LIGHTROOM_SEGMENT_MODEL"] = old
+
+    ready, why = seg.available()
+    if not ready:
+        skip("face segmentation, live model (5 checks)", why)
+        return
+
+    # 2. THE subtle one. The model emits logits — its six channels sum to
+    #    about -2.4, not 1. A "confidence" read straight off them is not a
+    #    probability and the 0.70 floor would mean nothing.
+    grey = np.full((64, 64, 3), 0.5)
+    p = seg._probabilities(grey)
+    sums = p.sum(-1)
+    check("class probabilities are softmaxed, not raw logits",
+          abs(float(sums.min()) - 1.0) < 1e-4 and abs(float(sums.max()) - 1.0) < 1e-4,
+          f"channel sums ran {sums.min():.4f}..{sums.max():.4f}, expected 1.0 — "
+          "the model's own output does not sum to 1 and must be softmaxed")
+
+    # 3. A flat warm field is exactly what fools colour-only skin detection:
+    #    terracotta, sand and bare wood all sit where skin sits.
+    warm = np.zeros((256, 256, 3))
+    warm[..., 0], warm[..., 1], warm[..., 2] = 0.82, 0.62, 0.45
+    mask, conf, share = seg.face_mask(warm)
+    check("a flat warm field is not a face",
+          share < seg.MIN_FACE_SHARE or conf < seg.MIN_CONFIDENCE,
+          f"share {share:.3f} confidence {conf:.2f} — this is the sand/wood case")
+
+    portrait = os.environ.get("LIGHTROOM_TEST_PORTRAIT", "")
+    noface = os.environ.get("LIGHTROOM_TEST_NOFACE", "")
+    if not portrait or not Path(portrait).exists():
+        skip("face segmentation, real photographs (3 checks)",
+             "set LIGHTROOM_TEST_PORTRAIT=/path/to/face.jpg and "
+             "LIGHTROOM_TEST_NOFACE=/path/to/warm-scene.jpg to run these")
+        return
+
+    ls = load_lookstats()
+
+    # 4. The false negative: a clear face that colour alone refuses.
+    rgb2d, _ = ls.load_image_2d(portrait)
+    whole = ls.skin(rgb2d.reshape(-1, 3), allow_unreliable=True)
+    got = seg.skin(portrait)
+    check("a real face is measured rather than refused",
+          got["ok"] is True and got["confidence"] >= seg.MIN_CONFIDENCE,
+          f"{got.get('reason', '')} conf={got.get('confidence')}")
+    check("the face reading is taken from the face, not the whole frame",
+          got["ok"] and (not whole.get("ok")
+                         or abs(got["ita"] - whole["ita"]) > 1e-9),
+          f"segmented ITA {got.get('ita')} vs whole-frame ITA {whole.get('ita')} — "
+          "identical would mean the mask changed nothing")
+
+    # 5. The false positive: warm scene, no face, must not produce a tone.
+    if noface and Path(noface).exists():
+        r = seg.skin(noface)
+        check("a warm scene with no face yields no skin tone",
+              r["ok"] is False and "face" in r["reason"].lower(),
+              f"reported {r.get('ita')} — {r.get('reason', '')[:120]}")
+    else:
+        skip("no-face refusal (1 check)", "set LIGHTROOM_TEST_NOFACE to run it")
+
+
 def main():
     if "--pre-fix" in sys.argv:
         layer1_document(pre_fix=True)
@@ -1263,6 +1374,7 @@ def main():
         layer7_analyze()
         layer8_raw()
         layer9_undecodable_raw()
+        layer10_segmentation()
     passed = sum(1 for _, ok, _ in results if ok)
     total = len(results)
     tail = f"  ({len(skipped)} skipped)" if skipped else ""

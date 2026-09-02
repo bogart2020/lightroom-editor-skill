@@ -46,9 +46,18 @@ disagree about what colour something is.
 
 Everything perceptual is CIE L\*a\*b\*. Anything compared against a `crs:` hue
 value stays in RGB-wheel degrees, because that is the wheel those attributes
-use. There is no model and no training data — it is colour science, in numpy,
-and every threshold is either derived from a stated definition or labelled in
-the source as a judgement call.
+use. Every measurement is colour science, in numpy, and every threshold is
+either derived from a stated definition or labelled in the source as a
+judgement call.
+
+**One optional model, for one question colour cannot answer.** Nothing in
+numpy can tell a face from a sand dune, and terracotta, sand and bare wood all
+sit exactly where skin sits. So `scripts/segment.py` can run MediaPipe's
+16 MB Selfie Multiclass segmenter to decide *which pixels are a face* — and
+then the skin tone is measured off those pixels by the same L\*a\*b\* code as
+everything else. The model locates; it never grades. It is not installed by
+default, not required, and not bundled: without it the skin reading withholds
+exactly as it did before.
 
 **It refuses rather than guesses.** A frame with no near-neutral content has no
 readable cast, so it prints `WITHHELD` and the reason and falls back to the

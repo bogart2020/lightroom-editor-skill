@@ -222,15 +222,13 @@ def embedded_preview(p):
     return np.asarray(thumb.data, dtype=np.float64)[..., :3] / 255.0
 
 
-def load_source(path, max_pixels=1_000_000, seed=0):
-    """Return (unbiased sample of the pixels as sRGB float (N,3), provenance).
+def load_image_2d(path):
+    """Return (the whole image as sRGB float (H,W,3), provenance).
 
-    A measurement needs a fair sample of the colours in the file, not a
-    resized picture. Every resampling filter that averages neighbouring
-    pixels — Pillow's default BICUBIC included — blends across hard colour
-    edges and manufactures hues the file never contained: two-pixel red and
-    blue stripes average to magenta. So an oversized image is subsampled by
-    drawing pixels at random, seeded so the result is reproducible.
+    Same decode and same fallback as load_source, but keeping the picture's
+    shape. Anything that needs to know WHERE a pixel is — a segmentation mask,
+    a crop — has to start here, because load_source's random subsample throws
+    the geometry away by design.
     """
     from pathlib import Path
     p = Path(path)
@@ -245,7 +243,7 @@ def load_source(path, max_pixels=1_000_000, seed=0):
             with rawpy.imread(str(p)) as raw:
                 rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True,
                                       output_bps=16, use_camera_wb=True)
-            a = linear_to_srgb(rgb.astype(np.float64) / 65535.0).reshape(-1, 3)
+            a = linear_to_srgb(rgb.astype(np.float64) / 65535.0)
             prov = SENSOR
         except rawpy.LibRawError:
             # LibRaw opened the file and then refused to unpack it. Current
@@ -258,13 +256,28 @@ def load_source(path, max_pixels=1_000_000, seed=0):
             # measurements refuse it. Raising instead would throw away a
             # perfectly good look reading; returning it unlabelled would let
             # the render be corrected against itself.
-            a = embedded_preview(p).reshape(-1, 3)
+            a = embedded_preview(p)
             prov = PREVIEW
     else:
         from PIL import Image
         im = Image.open(path).convert("RGB")
-        a = np.asarray(im, dtype=np.float64).reshape(-1, 3) / 255.0
+        a = np.asarray(im, dtype=np.float64) / 255.0
         prov = EIGHT_BIT
+    return a, prov
+
+
+def load_source(path, max_pixels=1_000_000, seed=0):
+    """Return (unbiased sample of the pixels as sRGB float (N,3), provenance).
+
+    A measurement needs a fair sample of the colours in the file, not a
+    resized picture. Every resampling filter that averages neighbouring
+    pixels — Pillow's default BICUBIC included — blends across hard colour
+    edges and manufactures hues the file never contained: two-pixel red and
+    blue stripes average to magenta. So an oversized image is subsampled by
+    drawing pixels at random, seeded so the result is reproducible.
+    """
+    a, prov = load_image_2d(path)
+    a = a.reshape(-1, 3)
     if a.shape[0] > max_pixels:
         idx = np.random.default_rng(seed).choice(a.shape[0], max_pixels, replace=False)
         a = a[idx]
