@@ -1,3 +1,9 @@
 Pillow>=9.0
 numpy>=1.24
 rawpy>=0.18
+
+# Optional. The face segmenter in scripts/segment.py runs on this; without it
+# the Layer 10 live-model checks skip, and skin tone withholds exactly as it
+# did before the segmenter existed. Weights are fetched separately, see
+# segment.py's docstring. Not required to run the suite.
+# ai-edge-litert>=2.2

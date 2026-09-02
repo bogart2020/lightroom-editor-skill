@@ -21,6 +21,34 @@ jobs:
       - name: Install test dependencies
         run: pip install -r tests/requirements.txt
 
+      # The segmenter is an OPTIONAL dependency of the skill, so it is an
+      # optional dependency of this job too. Both steps below are deliberately
+      # non-fatal: if the wheel is unavailable or Google's bucket is down, the
+      # segmentation checks SKIP, and a skip never counts as a pass in this
+      # suite. A red build caused by somebody else's outage teaches nothing.
+      - name: Install segmentation runtime (optional)
+        run: pip install ai-edge-litert || echo "no wheel for this platform — segmentation checks will skip"
+
+      - name: Fetch segmentation weights (optional)
+        run: |
+          dir=skills/lightroom-editor/scripts/models
+          file="$dir/selfie_multiclass_256x256.tflite"
+          url=https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite
+          mkdir -p "$dir"
+          if curl -sSfL --retry 3 --max-time 180 -o "$file" "$url"; then
+            size=$(wc -c < "$file")
+            echo "fetched $size bytes"
+            # -f already refuses HTTP errors, but a truncated or redirected
+            # body saved under a .tflite name would fail at load time instead
+            # of skipping cleanly, which is the worse failure. ~16 MB expected.
+            if [ "$size" -lt 1000000 ]; then
+              echo "too small to be the model — discarding so the checks skip"
+              rm -f "$file"
+            fi
+          else
+            echo "fetch failed — segmentation checks will skip, which is not a pass"
+          fi
+
       - name: Skill regression suite
         run: python tests/test_skill.py
 

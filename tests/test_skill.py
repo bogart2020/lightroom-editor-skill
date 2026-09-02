@@ -1305,7 +1305,7 @@ def layer10_segmentation():
 
     ready, why = seg.available()
     if not ready:
-        skip("face segmentation, live model (5 checks)", why)
+        skip("face segmentation, live model (3 checks)", why)
         return
 
     # 2. THE subtle one. The model emits logits — its six channels sum to
@@ -1328,12 +1328,34 @@ def layer10_segmentation():
           share < seg.MIN_FACE_SHARE or conf < seg.MIN_CONFIDENCE,
           f"share {share:.3f} confidence {conf:.2f} — this is the sand/wood case")
 
+    # 4. The false positive that mattered most, through the whole skin() path
+    #    rather than just face_mask(). Built rather than downloaded: a warm
+    #    graded scene needs no face in it to be a warm graded scene, and CI
+    #    that fetches a photograph from a third party is CI that goes red when
+    #    somebody else's URL rots.
+    rng = np.random.default_rng(7)
+    h = w = 384
+    col = np.linspace(0.55, 1.0, h)[:, None]
+    dune = np.stack([np.broadcast_to(col * 0.86, (h, w)),
+                     np.broadcast_to(col * 0.70, (h, w)),
+                     np.broadcast_to(col * 0.50, (h, w))], -1).copy()
+    dune += rng.normal(0, 0.03, (h, w, 1))
+    dune += np.sin(np.linspace(0, 9, w))[None, :, None] * 0.04
+    with tempfile.TemporaryDirectory() as d:
+        sand = Path(d) / "sand.png"
+        Image.fromarray((np.clip(dune, 0, 1) * 255).astype(np.uint8)).save(sand)
+        r = seg.skin(str(sand))
+        check("a warm scene with no face in it yields no skin tone",
+              r["ok"] is False and "face" in r["reason"].lower(),
+              f"reported ITA {r.get('ita')} on a picture of sand — {r.get('reason', '')[:120]}")
+
     portrait = os.environ.get("LIGHTROOM_TEST_PORTRAIT", "")
     noface = os.environ.get("LIGHTROOM_TEST_NOFACE", "")
     if not portrait or not Path(portrait).exists():
-        skip("face segmentation, real photographs (3 checks)",
-             "set LIGHTROOM_TEST_PORTRAIT=/path/to/face.jpg and "
-             "LIGHTROOM_TEST_NOFACE=/path/to/warm-scene.jpg to run these")
+        skip("face segmentation, real photographs (2 checks)",
+             "set LIGHTROOM_TEST_PORTRAIT=/path/to/face.jpg to run these; a real "
+             "face cannot be synthesised, and no third-party URL is depended on "
+             "to supply one")
         return
 
     ls = load_lookstats()
@@ -1351,14 +1373,12 @@ def layer10_segmentation():
           f"segmented ITA {got.get('ita')} vs whole-frame ITA {whole.get('ita')} — "
           "identical would mean the mask changed nothing")
 
-    # 5. The false positive: warm scene, no face, must not produce a tone.
+    # 6. Same refusal as check 4, on a real photograph rather than a built one.
     if noface and Path(noface).exists():
         r = seg.skin(noface)
-        check("a warm scene with no face yields no skin tone",
+        check("a real warm photograph with no face yields no skin tone",
               r["ok"] is False and "face" in r["reason"].lower(),
               f"reported {r.get('ita')} — {r.get('reason', '')[:120]}")
-    else:
-        skip("no-face refusal (1 check)", "set LIGHTROOM_TEST_NOFACE to run it")
 
 
 def main():
