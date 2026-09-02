@@ -1274,7 +1274,7 @@ def layer10_segmentation():
         import numpy as np
         from PIL import Image  # noqa: F401
     except ImportError:
-        skip("face segmentation (7 checks)", "numpy/Pillow not installed")
+        skip("face segmentation (13 checks)", "numpy/Pillow not installed")
         return
     seg = load_segment()
 
@@ -1305,7 +1305,7 @@ def layer10_segmentation():
 
     ready, why = seg.available()
     if not ready:
-        skip("face segmentation, live model (3 checks)", why)
+        skip("face segmentation, live model (11 checks)", why)
         return
 
     # 2. THE subtle one. The model emits logits — its six channels sum to
@@ -1349,36 +1349,55 @@ def layer10_segmentation():
               r["ok"] is False and "face" in r["reason"].lower(),
               f"reported ITA {r.get('ita')} on a picture of sand — {r.get('reason', '')[:120]}")
 
-    portrait = os.environ.get("LIGHTROOM_TEST_PORTRAIT", "")
-    noface = os.environ.get("LIGHTROOM_TEST_NOFACE", "")
-    if not portrait or not Path(portrait).exists():
-        skip("face segmentation, real photographs (2 checks)",
-             "set LIGHTROOM_TEST_PORTRAIT=/path/to/face.jpg to run these; a real "
-             "face cannot be synthesised, and no third-party URL is depended on "
-             "to supply one")
+    # 5. Real photographs. A face cannot be synthesised, so these are committed
+    #    under tests/fixtures — see the ATTRIBUTION there for what each one is
+    #    a test OF. LIGHTROOM_TEST_PORTRAIT still overrides, for trying a frame
+    #    that is misbehaving.
+    fixtures = ROOT / "tests" / "fixtures"
+    override = os.environ.get("LIGHTROOM_TEST_PORTRAIT", "")
+    portraits = ([Path(override)] if override and Path(override).exists() else
+                 sorted(fixtures.glob("portrait-*.jpg")))
+    if not portraits:
+        skip("face segmentation, real photographs (8 checks)",
+             f"no portrait fixtures found in {fixtures}")
         return
 
     ls = load_lookstats()
+    measured = {}
+    for p in portraits:
+        rgb2d, _ = ls.load_image_2d(str(p))
+        whole = ls.skin(rgb2d.reshape(-1, 3), allow_unreliable=True)
+        got = seg.skin(str(p))
+        if not check(f"a real face is measured rather than refused — {p.stem}",
+                     got["ok"] is True and got["confidence"] >= seg.MIN_CONFIDENCE,
+                     f"{got.get('reason', '')} conf={got.get('confidence')}"):
+            continue
+        measured[p.stem] = got["ita"]
+        # The mask has to change the answer, or it is doing nothing. Where the
+        # colour-only path refused outright, that is change enough.
+        check(f"the reading comes off the face, not the frame — {p.stem}",
+              (not whole.get("ok")) or abs(got["ita"] - whole["ita"]) > 1e-9,
+              f"segmented ITA {got['ita']:.1f} vs whole-frame {whole.get('ita')}")
 
-    # 4. The false negative: a clear face that colour alone refuses.
-    rgb2d, _ = ls.load_image_2d(portrait)
-    whole = ls.skin(rgb2d.reshape(-1, 3), allow_unreliable=True)
-    got = seg.skin(portrait)
-    check("a real face is measured rather than refused",
-          got["ok"] is True and got["confidence"] >= seg.MIN_CONFIDENCE,
-          f"{got.get('reason', '')} conf={got.get('confidence')}")
-    check("the face reading is taken from the face, not the whole frame",
-          got["ok"] and (not whole.get("ok")
-                         or abs(got["ita"] - whole["ita"]) > 1e-9),
-          f"segmented ITA {got.get('ita')} vs whole-frame ITA {whole.get('ita')} — "
-          "identical would mean the mask changed nothing")
+    # 6. The directional guard. Before the segmenter, readings ran too dark --
+    #    a light-skinned subject with a published ITA of +41 to +55 was being
+    #    reported between -3 and -64, as fact. The fixtures span intermediate,
+    #    brown and dark on purpose; a change that collapsed them toward one
+    #    answer would be that bias coming back, and would go red here.
+    if len(measured) >= 3:
+        classes = {ls.ita_class(v) for v in measured.values()}
+        check("the fixtures stay in distinct ITA classes",
+              len(classes) >= 3,
+              f"{measured} collapsed to {classes} — readings converging is how "
+              "the old dark-bias showed up")
 
-    # 6. Same refusal as check 4, on a real photograph rather than a built one.
-    if noface and Path(noface).exists():
-        r = seg.skin(noface)
-        check("a real warm photograph with no face yields no skin tone",
+    dune = fixtures / "no-face-warm-dune.jpg"
+    if dune.exists():
+        r = seg.skin(str(dune))
+        check("a photograph of a desert is not a skin tone",
               r["ok"] is False and "face" in r["reason"].lower(),
-              f"reported {r.get('ita')} — {r.get('reason', '')[:120]}")
+              f"reported ITA {r.get('ita')} for a sand dune — "
+              f"{r.get('reason', '')[:100]}")
 
 
 def main():
