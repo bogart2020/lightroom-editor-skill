@@ -50,14 +50,32 @@ def load_crs():
 
 
 def report(path, as_source=False, portrait=False, profile=None):
-    rgb = ls.load_rgb(path)
+    rgb, provenance = ls.load_source(path)
+    preview = provenance == ls.PREVIEW
     withheld = []
 
-    print(f"{'source' if as_source else 'reference'}:    {path}\n")
+    print(f"{'source' if as_source else 'reference'}:    {path}")
+    print(f"pixels:       {provenance}")
+    if preview:
+        print("              LibRaw could not unpack this file, so these are the")
+        print("              camera's own embedded preview — its finished render,")
+        print("              not its sensor data. The look figures below still")
+        print("              hold: the render IS the look. The baseline figures")
+        print("              do not, and are withheld rather than guessed.")
+    print()
 
     if as_source:
-        cast = ls.measure_cast(rgb)
-        if cast is None:
+        cast = None if preview else ls.measure_cast(rgb)
+        if preview:
+            withheld.append("cast")
+            print("  measured cast       WITHHELD — the camera already made this")
+            print("                      white-balance call, so a cast measured here")
+            print("                      is the cast of its render. Correcting the")
+            print("                      render with a number read off the render is")
+            print("                      circular, and the number would look fine.")
+            print(f"  falling back to     {profile or 'the camera profile for this source'}"
+                  "\n                      (from profile, UNMEASURED)")
+        elif cast is None:
             withheld.append("cast")
             print("  neutral content     too little, or nothing near neutral")
             print("  measured cast       WITHHELD — this frame does not contain")
@@ -123,8 +141,14 @@ def report(path, as_source=False, portrait=False, profile=None):
               f"name covers about\n  thirty degrees, so it is a label, not a target: grading at "
               f"the band\n  centre is what turns a warm amber reference into an orange one.")
 
-    print(f"  black point                 {ls.black_point(rgb):.4f}   "
-          "relative luminance, linear")
+    if preview:
+        withheld.append("black point")
+        print( "  black point                 WITHHELD — the camera has already placed")
+        print( "                              these blacks. A preview says nothing about")
+        print( "                              the recovery headroom the RAW still holds.")
+    else:
+        print(f"  black point                 {ls.black_point(rgb):.4f}   "
+              "relative luminance, linear")
 
     print(f"\n  {'zone':<7}{'L':>6}{'a':>8}{'b':>8}{'share':>9}")
     for z in ls.zones(rgb):

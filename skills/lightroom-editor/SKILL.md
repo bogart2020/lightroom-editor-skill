@@ -20,6 +20,7 @@ Adobe Lightroom mobile (iOS/Android), **Adobe Color** profile as the default sta
 
 - **Chat only** (no shell, no filesystem): `.ARW`, `.CR3`, `.NEF`, `.RAF`, `.DNG` do not render. Say so plainly and ask for a JPEG export or a screenshot — then continue; a described photo is still workable.
 - **With a code environment**: decode it. `rawpy`/`libraw` reads the sensor data, `exiftool` reads the metadata, and DNGs carry an embedded JPEG preview you can extract and look at directly. Measure rather than assume — black point, clipping, and neutral balance are all readable, and a measured file beats a described one.
+- **Current iPhone ProRAW is the exception, and the scripts handle it for you.** It is DNG 1.7 / JPEG-XL, which `libraw` decodes only when built against Adobe's DNG SDK — the `rawpy` wheel is not, so it accepts the file and then refuses to unpack it. `lookstats.py` falls back to the embedded preview and labels it `RAW preview`. Read that label: the preview is Apple's finished render, so the **look** figures (band shares, hue range, zones) hold, while **cast, Tint and black point are withheld** — those exist to undo Apple's render and cannot be measured off it. Fall back to the ProRAW profile in `references/07-sources.md`, labelled unmeasured, exactly as the script's own output says.
 
 Check which case you are in before declining.
 

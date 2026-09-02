@@ -60,10 +60,29 @@ def load_image(path):
             import rawpy
         except ImportError:
             sys.exit("rawpy is needed to decode RAW — pip install -r tests/requirements.txt")
-        with rawpy.imread(str(p)) as raw:
-            rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True,
-                                  output_bps=16, use_camera_wb=True)
-        return rgb.astype(np.float64) / 65535.0, "RAW, linear"
+        try:
+            with rawpy.imread(str(p)) as raw:
+                rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True,
+                                      output_bps=16, use_camera_wb=True)
+            return rgb.astype(np.float64) / 65535.0, "RAW, linear"
+        except rawpy.LibRawError:
+            # LibRaw opened it and then refused to unpack it — current iPhone
+            # ProRAW (DNG 1.7 / JPEG-XL) needs Adobe's DNG SDK, which the
+            # rawpy wheel is not built with. Fall back to the camera's
+            # embedded preview, exactly as lookstats.load_source does; the two
+            # must stay in step or a Tint probed here is measured against a
+            # different image than the cast it corrects. See
+            # research/06-proraw-dng-decode.md.
+            import io
+            from PIL import Image
+            with rawpy.imread(str(p)) as raw:
+                thumb = raw.extract_thumb()
+            if thumb.format == rawpy.ThumbFormat.JPEG:
+                im = Image.open(io.BytesIO(thumb.data)).convert("RGB")
+                a = np.asarray(im, dtype=np.float64) / 255.0
+            else:
+                a = np.asarray(thumb.data, dtype=np.float64)[..., :3] / 255.0
+            return srgb_to_linear(a), "RAW preview, already rendered"
 
     from PIL import Image
     im = Image.open(p).convert("RGB")

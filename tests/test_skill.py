@@ -1112,6 +1112,94 @@ def layer8_raw():
           "different images and no probed Tint means anything")
 
 
+# ---------------------------------------------------------------- layer 9
+def layer9_undecodable_raw():
+    """RAW that LibRaw opens and then refuses to unpack.
+
+        LIGHTROOM_TEST_PRORAW=/path/to/file.dng python tests/test_skill.py
+
+    Current iPhone ProRAW is DNG 1.7 / JPEG-XL. LibRaw 0.22 decodes that only
+    when built against Adobe DNG SDK 1.7.x, and the rawpy wheel is not; see
+    research/06-proraw-dng-decode.md. LibRaw deliberately does not refuse such
+    a file at open_file(), so rawpy.imread() succeeds and the failure surfaces
+    later inside postprocess() -- which is why this needs its own layer rather
+    than an assertion inside layer 8.
+
+    Every file affected still carries a full-size embedded preview, so the
+    fallback has real pixels to work with. What it must NOT do is let those
+    pixels pass for sensor data: the preview is the camera's finished render,
+    and the baseline figures exist to undo exactly that render.
+    """
+    print("\nLAYER 9 — RAW the decoder cannot unpack")
+    raw = os.environ.get("LIGHTROOM_TEST_PRORAW", "")
+    if not raw or not Path(raw).exists():
+        skip("undecodable-RAW fallback (7 checks)",
+             "set LIGHTROOM_TEST_PRORAW=/path/to/proraw.dng to run these; "
+             "the repo carries no RAW file to test with")
+        return
+    try:
+        import numpy as np
+        import rawpy  # noqa: F401
+    except ImportError:
+        skip("undecodable-RAW fallback (7 checks)", "numpy/rawpy not installed")
+        return
+    ls = load_lookstats()
+    spec = importlib.util.spec_from_file_location("crs_render", SCRIPTS / "crs-render.py")
+    crs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(crs)
+
+    # 1. It must not raise. Before the fix this was an uncaught
+    #    LibRawFileUnsupportedError traceback out of postprocess().
+    try:
+        rgb, prov = ls.load_source(raw, max_pixels=10 ** 9)
+        raised = ""
+    except Exception as e:  # noqa: BLE001 - the point is that nothing escapes
+        rgb, prov, raised = None, "", f"{type(e).__name__}: {e}"
+    if not check("an undecodable RAW falls back instead of raising", not raised, raised):
+        return
+
+    check("the fallback yields finite sRGB in range",
+          np.isfinite(rgb).all() and rgb.min() >= 0.0 and rgb.max() <= 1.0,
+          f"got range [{rgb.min()}, {rgb.max()}]")
+
+    # 2. Provenance must say the pixels are a render, not a sensor read.
+    check("the fallback reports itself as a preview, not as RAW",
+          prov == ls.PREVIEW, f"provenance was {prov!r}, expected {ls.PREVIEW!r}")
+
+    # 3. THE invariant from layer 8, carried onto the fallback path. Both
+    #    scripts must still be looking at the same image. Exact equality is
+    #    not reachable here: lookstats holds the preview as sRGB while
+    #    crs-render holds it linear, and srgb->linear->srgb round-trips to
+    #    within one ulp (measured 1.11e-16), not to zero.
+    lin, depth = crs.load_image(raw)
+    theirs = crs.linear_to_srgb(lin).reshape(-1, 3)
+    worst = float(np.abs(rgb - theirs).max()) if rgb.shape == theirs.shape else float("inf")
+    check("lookstats and crs-render fall back to the same preview",
+          worst < 1e-12,
+          f"decodes differ by up to {worst}; the two scripts are looking at "
+          "different images")
+
+    check("crs-render labels the preview as already rendered",
+          "preview" in depth.lower(),
+          f"depth label was {depth!r}, which does not say the pixels are a render")
+
+    # 4. The one that matters. A preview supports the LOOK figures and cannot
+    #    support the BASELINE ones: the camera has already placed the blacks
+    #    and made the white balance call, so a cast measured here is the cast
+    #    of the camera's render. Correcting the render using a number read off
+    #    the render is circular, and it would be invisible in the output --
+    #    every figure looks perfectly reasonable. Band shares stay, because
+    #    the look is precisely what a preview does show.
+    rc, out = run_analyze("--source", raw)
+    head = out.split("band")[0]
+    check("a preview source withholds the baseline figures and says why",
+          rc == 0 and "WITHHELD" in head and "preview" in out.lower(),
+          out.strip()[:600])
+    check("a preview source still reports the look figures",
+          rc == 0 and "share" in out and "%" in out,
+          out.strip()[-400:])
+
+
 def main():
     if "--pre-fix" in sys.argv:
         layer1_document(pre_fix=True)
@@ -1124,6 +1212,7 @@ def main():
         layer6_lookstats()
         layer7_analyze()
         layer8_raw()
+        layer9_undecodable_raw()
     passed = sum(1 for _, ok, _ in results if ok)
     total = len(results)
     tail = f"  ({len(skipped)} skipped)" if skipped else ""

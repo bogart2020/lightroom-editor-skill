@@ -185,8 +185,45 @@ def derive_floors():
 
 
 # ----------------------------------------------------------------- sampling
-def load_rgb(path, max_pixels=1_000_000, seed=0):
-    """Return an unbiased sample of the image's pixels as sRGB float (N,3).
+# Where a frame's pixels came from. This travels with the numbers because
+# some measurements are only meaningful against some sources, and nothing in
+# the pixels themselves says which case you are in -- a preview measures
+# exactly as cleanly as a sensor read, it just answers a different question.
+SENSOR = "RAW sensor"        # LibRaw decoded the sensor data
+PREVIEW = "RAW preview"      # LibRaw refused; this is the camera's own render
+EIGHT_BIT = "8-bit file"     # an ordinary JPEG/PNG/HEIC
+
+
+def embedded_preview(p):
+    """The camera's own JPEG preview, as sRGB float (H,W,3).
+
+    Every RAW this falls back for carries one, because the camera needs it to
+    show you the shot on its own screen.
+    """
+    import rawpy
+    from PIL import Image
+    try:
+        with rawpy.imread(str(p)) as raw:
+            thumb = raw.extract_thumb()
+    except rawpy.LibRawError as e:
+        # Both doors are shut: the decoder will not unpack it and there is no
+        # preview to fall back on. Say which two things failed, rather than
+        # letting a LibRaw error surface from inside a handler for a different
+        # LibRaw error and read as the original problem.
+        raise RuntimeError(
+            f"{p.name}: this RAW cannot be decoded by the installed LibRaw, and "
+            f"it carries no embedded preview to fall back on ({e}). Export a "
+            "JPEG from the camera or from Lightroom and measure that instead."
+        ) from e
+    if thumb.format == rawpy.ThumbFormat.JPEG:
+        import io
+        im = Image.open(io.BytesIO(thumb.data)).convert("RGB")
+        return np.asarray(im, dtype=np.float64) / 255.0
+    return np.asarray(thumb.data, dtype=np.float64)[..., :3] / 255.0
+
+
+def load_source(path, max_pixels=1_000_000, seed=0):
+    """Return (unbiased sample of the pixels as sRGB float (N,3), provenance).
 
     A measurement needs a fair sample of the colours in the file, not a
     resized picture. Every resampling filter that averages neighbouring
@@ -204,18 +241,39 @@ def load_rgb(path, max_pixels=1_000_000, seed=0):
         # residual the user actually sees rather than the sensor's raw
         # imbalance -- which is dominated by the illuminant, not the camera.
         import rawpy
-        with rawpy.imread(str(p)) as raw:
-            rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True,
-                                  output_bps=16, use_camera_wb=True)
-        a = linear_to_srgb(rgb.astype(np.float64) / 65535.0).reshape(-1, 3)
+        try:
+            with rawpy.imread(str(p)) as raw:
+                rgb = raw.postprocess(gamma=(1, 1), no_auto_bright=True,
+                                      output_bps=16, use_camera_wb=True)
+            a = linear_to_srgb(rgb.astype(np.float64) / 65535.0).reshape(-1, 3)
+            prov = SENSOR
+        except rawpy.LibRawError:
+            # LibRaw opened the file and then refused to unpack it. Current
+            # iPhone ProRAW is DNG 1.7 / JPEG-XL, which LibRaw 0.22 decodes
+            # only when built against Adobe DNG SDK 1.7.x; the rawpy wheel is
+            # not, so it deliberately accepts the file at open and fails here.
+            # See research/06-proraw-dng-decode.md. The embedded preview is
+            # real pixel data and worth having -- but it is the camera's
+            # finished render, so it goes out labelled and the baseline
+            # measurements refuse it. Raising instead would throw away a
+            # perfectly good look reading; returning it unlabelled would let
+            # the render be corrected against itself.
+            a = embedded_preview(p).reshape(-1, 3)
+            prov = PREVIEW
     else:
         from PIL import Image
         im = Image.open(path).convert("RGB")
         a = np.asarray(im, dtype=np.float64).reshape(-1, 3) / 255.0
+        prov = EIGHT_BIT
     if a.shape[0] > max_pixels:
         idx = np.random.default_rng(seed).choice(a.shape[0], max_pixels, replace=False)
         a = a[idx]
-    return a
+    return a, prov
+
+
+def load_rgb(path, max_pixels=1_000_000, seed=0):
+    """The pixels alone, for callers that do not branch on provenance."""
+    return load_source(path, max_pixels, seed)[0]
 
 
 # ------------------------------------------------------------- measurement
