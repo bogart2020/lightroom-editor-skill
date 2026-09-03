@@ -1130,8 +1130,11 @@ def layer8_raw():
     raw = os.environ.get("LIGHTROOM_TEST_RAW", "")
     if not raw or not Path(raw).exists():
         skip("RAW decode path (2 checks)",
-             "set LIGHTROOM_TEST_RAW=/path/to/file.arw to run these; "
-             "the repo carries no RAW file to test with")
+             "set LIGHTROOM_TEST_RAW=/path/to/file.arw to run these. Unlike the "
+             "ProRAW fixture, no decodable RAW is committed: the smallest to "
+             "hand is 25 MB against a 2 MB repository, and it buys two checks "
+             "where that 7.7 MB buys seven. The decode path is therefore "
+             "verified locally, not here — which is not the same as verified")
         return
     try:
         import numpy as np
@@ -1181,11 +1184,15 @@ def layer9_undecodable_raw():
     and the baseline figures exist to undo exactly that render.
     """
     print("\nLAYER 9 — RAW the decoder cannot unpack")
+    # A ProRAW fixture is committed, because this path cannot be synthesised:
+    # it needs a genuine DNG 1.7 / JPEG-XL file that LibRaw opens and then
+    # refuses to unpack. 7.7 MB, and it buys all seven checks below.
     raw = os.environ.get("LIGHTROOM_TEST_PRORAW", "")
     if not raw or not Path(raw).exists():
+        raw = str(ROOT / "tests" / "fixtures" / "proraw-jpegxl-undecodable.dng")
+    if not Path(raw).exists():
         skip("undecodable-RAW fallback (7 checks)",
-             "set LIGHTROOM_TEST_PRORAW=/path/to/proraw.dng to run these; "
-             "the repo carries no RAW file to test with")
+             f"no ProRAW fixture at {raw}, and LIGHTROOM_TEST_PRORAW is not set")
         return
     try:
         import numpy as np

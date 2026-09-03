@@ -1,10 +1,33 @@
 # Test fixtures
 
-Four photographs, committed so the face-segmentation checks in
-`tests/test_skill.py` Layer 10 run on CI instead of skipping. Each one is here
-because it is a *specific documented failure*, not because it is a nice picture.
+Photographs committed so checks in `tests/test_skill.py` run on CI instead of
+skipping. Each one is here because it is a *specific documented failure*, not
+because it is a nice picture.
 
-All four are from [Pexels](https://www.pexels.com) under the
+## `proraw-jpegxl-undecodable.dng` — the ProRAW fallback (Layer 9)
+
+An iPhone 16 Pro ProRAW frame — a snowy lake, no people in it. Shot by the
+repository owner, so no third-party licence applies. Checked before committing:
+no GPS, no serial numbers, no owner or artist tags; Make, Model, firmware
+version and date only.
+
+It is here because this path **cannot be synthesised**. It needs a genuine
+DNG 1.7 / JPEG-XL file that LibRaw opens and then refuses to unpack — the exact
+sequence described in `research/06-proraw-dng-decode.md`, where the failure
+surfaces inside `postprocess()` rather than at `open_file()`. Any file that
+merely fails to open would test the wrong thing.
+
+7.7 MB, the smallest of six that reproduce it, and it buys all seven Layer 9
+checks.
+
+**No decodable RAW is committed.** The smallest to hand is a 25 MB Sony ARW
+against a 2 MB repository, and it would buy two checks where this 7.7 MB buys
+seven. Layer 8 therefore still skips on CI and says so. Run it locally with
+`LIGHTROOM_TEST_RAW=/path/to/file.arw`.
+
+## The face-segmentation photographs (Layer 10)
+
+These four are from [Pexels](https://www.pexels.com) under the
 [Pexels License](https://www.pexels.com/license/): free to use, commercial use
 permitted, no attribution required. Attribution is given anyway, because the
 photographers deserve it and because a fixture whose provenance nobody recorded
