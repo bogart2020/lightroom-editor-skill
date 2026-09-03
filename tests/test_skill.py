@@ -1127,14 +1127,19 @@ def layer8_raw():
     tested.
     """
     print("\nLAYER 8 — RAW decode path")
+    # A generated Bayer DNG, not a camera file: 0.61 MB against the 25 MB the
+    # smallest real RAW to hand would have cost, with no licence and no
+    # likeness attached. tests/fixtures/make_synthetic_dng.py rebuilds it
+    # byte-for-byte. It is a stronger fixture than a camera file in one
+    # respect -- it carries NO embedded preview, so the sensor path is the
+    # only path through it and a broken decode cannot be quietly rescued by
+    # the ProRAW fallback. Set LIGHTROOM_TEST_RAW to test a real camera file.
     raw = os.environ.get("LIGHTROOM_TEST_RAW", "")
     if not raw or not Path(raw).exists():
+        raw = str(ROOT / "tests" / "fixtures" / "synthetic-bayer-decodable.dng")
+    if not Path(raw).exists():
         skip("RAW decode path (2 checks)",
-             "set LIGHTROOM_TEST_RAW=/path/to/file.arw to run these. Unlike the "
-             "ProRAW fixture, no decodable RAW is committed: the smallest to "
-             "hand is 25 MB against a 2 MB repository, and it buys two checks "
-             "where that 7.7 MB buys seven. The decode path is therefore "
-             "verified locally, not here — which is not the same as verified")
+             f"no decodable RAW fixture at {raw}, and LIGHTROOM_TEST_RAW is not set")
         return
     try:
         import numpy as np

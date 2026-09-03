@@ -20,10 +20,25 @@ merely fails to open would test the wrong thing.
 7.7 MB, the smallest of six that reproduce it, and it buys all seven Layer 9
 checks.
 
-**No decodable RAW is committed.** The smallest to hand is a 25 MB Sony ARW
-against a 2 MB repository, and it would buy two checks where this 7.7 MB buys
-seven. Layer 8 therefore still skips on CI and says so. Run it locally with
-`LIGHTROOM_TEST_RAW=/path/to/file.arw`.
+## `synthetic-bayer-decodable.dng` — the RAW decode path (Layer 8)
+
+**Generated, not photographed.** 640×480 RGGB Bayer, 16-bit, 0.61 MB. Rebuilt
+byte-for-byte by `make_synthetic_dng.py` beside it — same seed, same geometry,
+verified identical across runs (`sha256` 898d72c3…).
+
+The smallest real RAW to hand was a 25 MB Sony ARW, forty times larger, of
+unclear provenance. This carries no licence, no likeness, no camera serial and
+no GPS, because it was never a photograph: a vertical luminance ramp, a
+horizontal colour ramp, three flat patches, and a little seeded noise.
+
+It is a *stronger* fixture than a camera file in one specific respect. LibRaw
+finds **no embedded preview** in it, so the sensor path is the only path through
+it — a broken decode cannot be quietly rescued by the ProRAW preview fallback
+and pass anyway. On a real camera file that rescue is exactly what would hide
+the regression.
+
+Set `LIGHTROOM_TEST_RAW=/path/to/file.arw` to run Layer 8 against a real camera
+file instead; the fixture is the default, not the limit.
 
 ## The face-segmentation photographs (Layer 10)
 
